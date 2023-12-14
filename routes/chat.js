@@ -11,8 +11,14 @@ router.post("/", async (req, res) => {
 router.get("/get-all-chat", async (req, res) => {
   await chat.fetchAllChats(req, res);
 });
-router.post("/group", async (req, res) => {
+router.get("/get-info-chat/:chatId", async (req, res) => {
+  await chat.getInfo(req, res);
+});
+router.post("/create-chat", async (req, res) => {
   await chat.creatGroup(req, res);
+});
+router.post("/update-photo-chat", async (req, res) => {
+  await chat.updateChatPhoto(req, res);
 });
 router.post("/group/rename", async (req, res) => {
   await chat.renameGroup(req, res);

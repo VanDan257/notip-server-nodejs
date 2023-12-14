@@ -59,6 +59,7 @@ class ChatController {
       }
     }
   }
+
   async fetchAllChats(req, res) {
     try {
       let chats = await sequelize.query(
@@ -73,7 +74,7 @@ class ChatController {
         if(lstChat[i].typeChatId == 1){
           var userChat = await UserChat.findOne({
             where: {
-              chatId: Chat.id,
+              chatId: lstChat[i].id,
               userId: {
                 [Op.ne]: 1 // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
               },
@@ -84,55 +85,102 @@ class ChatController {
             res.status(200).send("Not found user chat!")
           }
 
-          var user = await User.findByPk(userChat.id);
-          lstChat[i].name = user.name;
+          var user = await User.findByPk(userChat.userId);
+          lstChat[i].chatName = user.name;
           lstChat[i].photo = user.avatar;
 
         }
       }
 
-      res.status(200).json(chats[0]);
+      lstChat.sort((chat)=>{
+        chat.updatedAt
+      })
+      res.status(200).json(lstChat);
     } catch (error) {
       res.status(500).send(error);
       console.log(error);
     }
   }
+
+  async getInfo(req, res){
+    const {chatId} = req.params;
+    try{
+      let chat = await Chat.findByPk(chatId);
+
+      // neu chat thuoc loai tin nhan rieng (1-1) => tra ve thong tin nguoi chat
+      if(chat.typeChatId == 1){
+        let userChat = await UserChat.findOne({
+          where: {
+            chatId: chat.id,
+            userId: {
+              [Op.ne]: 1 // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+            },
+          }
+        });
+
+        if(userChat == null){
+          res.status(200).send("Not found user chat!")
+        }
+
+        let user = await User.findByPk(userChat.userId);
+
+        res.status(200).json(user);
+      }
+
+      else{
+        let userChat = await UserChat.findAll({
+          where: {
+            chatId: chat.id,
+            userId: {
+              [Op.ne]: 1 // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+            },
+          }
+        });
+
+        if(userChat == null){
+          res.status(200).send("Not found user chat!")
+        }
+
+        let lstUser = [];
+        for (let i = 0; i < userChat.length; i++) {
+          let user = await User.findByPk(userChat[i].userId,
+            {
+              attributes: { exclude: ['password'] }, // Loại bỏ cột password khỏi kết quả trả về
+            }
+        );
+          lstUser.push(user);
+        }
+
+        res.status(200).json({chat: chat, users: lstUser});
+      }
+    }
+    catch (e) {
+      res.status(500).json(e);
+    }
+  }
+
   async creatGroup(req, res) {
-    const { chatName, users } = req.body;
-    if (!chatName || !users) {
-      res.status(400).json({ message: "Please fill the fields" });
+    const { chatName, typeChatId, userIds } = req.body;
+
+    console.log(typeof(userIds));
+
+    let chat = await Chat.create({
+      chatName: chatName,
+      typeChatId: typeChatId
+    });
+
+    await UserChat.create({
+      chatId: chat.id,
+      userId: 1 // req.rootUserId
+    })
+
+    for (let i = 0; i < userIds.length; i++) {
+      await UserChat.create({
+        chatId: chat.id,
+        userId: userIds[i]
+      })
     }
-    const parsedUsers = JSON.parse(users);
-    console.log("parsedUsers: ", parsedUsers);
-    if (parsedUsers.length < 2)
-      res.send(400).send("Group should contain more than 2 users");
-    parsedUsers.push(req.rootUser);
-    try {
-      const chat = await Chat.create({
-        chatName: chatName,
-        users: parsedUsers,
-        isGroup: true,
-        groupAdmin: req.rootUserId,
-      });
-      const createdChat = await Chat.findByPk(chat.id, {
-        include: [
-          {
-            model: User,
-            as: "users",
-            attributes: { exclude: ["password"] },
-          },
-          {
-            model: User,
-            as: "groupAdmin",
-            attributes: { exclude: ["password"] },
-          },
-        ],
-      });
-      // res.status(200).json(createdChat);
-      res.send(createdChat);
-    } catch (error) {
-      res.sendStatus(500);
-    }
+
   }
   async renameGroup(req, res) {
     const { chatId, chatName } = req.body;
@@ -152,6 +200,34 @@ class ChatController {
       console.log(error);
     }
   }
+
+  async updateChatPhoto(req, res){
+    const {chatId} = req.params;
+    let file;
+    let uploadPath;
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).send("No files were uploaded.");
+    }
+
+    // The name of the input field (i.e. "file") is used to retrieve the uploaded file
+    file = req.files.file;
+    console.log('file: ', file)
+
+    uploadPath = "E:\\Do_An_5\\notip-client\\src\\assets\\images\\photo-chat" + file.name;
+
+    // Use the mv() method to place the file somewhere on your server
+    file.mv(uploadPath, function (err) {
+      if (err) return res.status(500).send(err);
+    });
+
+    await Chat.update({
+      photo: file.name
+    },
+    {
+      where: {id: chatId}
+    })
+  }
+
   async addToGroup(req, res) {
     const { userId, chatId } = req.body;
     // const existing = await Chat.findOne({where: { id: chatId }});

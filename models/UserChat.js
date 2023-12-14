@@ -4,11 +4,6 @@ const User = require('../models/User')
 const Chat = require('../models/Chat')
 
 const UserChat = sequelize.define('UserChats', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true, // Tự động tăng giá trị
-    },
     userId: {
         type: DataTypes.INTEGER, // Change the data type to match your Message model ID type
         references: {
