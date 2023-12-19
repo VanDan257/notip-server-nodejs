@@ -6,16 +6,15 @@ var logger = require("morgan");
 var bodyParser = require("body-parser"); // npm i body-parser
 var fileUpLoad = require("express-fileupload"); // npm iexpress-fileupload
 const cors = require("cors");
-// const http = require("http");
-// const socketIo = require("socket.io");
-// const server = http.createServer(app);
-// const io = socketIo(server);
 const Server = require("socket.io");
 require("dotenv").config();
+const User = require("./models/User");
+const UserChat = require("./models/UserChat");
 var usersRouter = require("./routes/users");
 var chatsRouter = require("./routes/chat");
 var messageRouter = require("./routes/message");
 var friendRouter = require("./routes/friend");
+const sequelize = require("./mySQL/dbconnect");
 
 var app = express();
 
@@ -27,13 +26,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// const corsConfig = {
-//   origin: process.env.BASE_URL,
-//   credentials: true,
-//   optionsSuccessStatus: 200,
-// };
-// app.use(cors(corsConfig));
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
@@ -75,6 +67,7 @@ app.use(function (err, req, res, next) {
 const server = app.listen(process.env.PORT, () => {
   console.log(`Server Listening at PORT - ${process.env.PORT}`);
 });
+
 const io = new Server.Server(server, {
   pingTimeout: 60000,
   cors: {
@@ -92,13 +85,23 @@ io.on("connection", (socket) => {
   socket.on("typing", (room) => socket.in(room).emit("typing"));
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("new message", (newMessageRecieve) => {
-    var chat = newMessageRecieve.chatId;
-    if (!chat.users) console.log("chats.users is not defined");
-    chat.users.forEach((user) => {
-      if (user.id == newMessageRecieve.sender.id) return;
+  socket.on("new message", async (newMessageRecieve) => {
+    console.log(newMessageRecieve);
+    var chatId = newMessageRecieve.chatId;
+    if (chatId == null) {
+      console.log("chats is not defined");
+    }
+
+    const users = await sequelize.query(
+      "SELECT `users`.*  FROM `Users` AS `Users` INNER JOIN `UserChats` AS `UserChats` ON `Users`.`id` = `UserChats`.`userId` WHERE `UserChats`.`chatId` = " +
+        chatId
+    );
+
+    //   if (!chat.users) console.log("chats.users is not defined");
+    for (var user of users) {
       socket.in(user.id).emit("message recieved", newMessageRecieve);
-    });
+    }
+    //   if (user.id == newMessageRecieve.senderId) return;
   });
 });
 

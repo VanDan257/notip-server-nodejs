@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const sequelize = require('../mySQL/dbconnect')
 const { DataTypes } = require('sequelize');
 const Friend = require("./Friend");
+const Message = require("./Message");
 
 const User = sequelize.define('Users', {
     id: {
@@ -30,6 +31,10 @@ const User = sequelize.define('Users', {
         type: DataTypes.STRING,
         defaultValue:
             'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg',
+    },
+    phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
     },
     address: {
         type: DataTypes.STRING,
@@ -72,6 +77,8 @@ User.prototype.generateAuthToken = async function () {
         console.log('error while generating token');
     }
 };
+
+// User.hasMany(Message, { foreignKey: 'senderId' });
 
 // (async () => {
 //     await sequelize.sync(); // This will create the table if it doesn't exist

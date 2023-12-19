@@ -1,18 +1,20 @@
 const User = require("../models/User.js");
 const bcrypt = require("bcryptjs");
 const { Sequelize } = require("sequelize");
+const Chat = require("../models/Chat");
+const sequelize = require("../mySQL/dbconnect");
 const Op = require("sequelize").Op;
 
 class UserController {
   async register(req, res) {
-    const { username, email, password } = req.body;
+    const { username, phone, email, password } = req.body;
     console.log(req.body);
     try {
       const existingUser = await User.findOne({ where: { email: email } });
 
       if (existingUser)
         return res.status(200).json({ error: "User already Exits" });
-      const newuser = new User({ email, password, name: username });
+      const newuser = new User({ email: email, password: password, name: username, phone: phone });
       const token = await newuser.generateAuthToken();
       await newuser.save();
       res.json({ message: "success", token: token });
@@ -23,6 +25,7 @@ class UserController {
   }
   async login(req, res) {
     const { email, password } = req.body;
+    console.log('email: ', email, 'password: ', password);
     try {
       const valid = await User.findOne({ where: { email: email } });
 
@@ -37,10 +40,12 @@ class UserController {
           httpOnly: true,
           maxAge: 24 * 60 * 60 * 1000,
         });
-        res.status(200).json({
+        res.status(200).json({data: {
+          id: valid.id,
           name: valid.name,
           token: token,
           photoUrl: valid.avatar,
+        },
           status: 200,
         });
       }
@@ -73,22 +78,17 @@ class UserController {
 
   async searchUsers(req, res) {
     // const excludedUserId = req.rootUserId; // Lấy ID của người dùng hiện tại
-
-    const search = req.query.search
-      ? {
-          [Op.or]: [
-            { name: { [Op.like]: `%${req.query.search}%` } },
-            { email: { [Op.like]: `%${req.query.search}%` } },
-          ],
-        }
-      : {};
-
+    const {keySearch} = req.params
     const users = await User.findAll({
       where: {
-        [Op.and]: [
-          search,
-          // { id: { [Op.ne]: req.rootUserId } },
+        [Op.or]: [
+          { name: { [Op.like]: `%${keySearch}%` } },
+          { email: { [Op.like]: `%${keySearch}%` } },
+          { phone: { [Op.like]: `%${keySearch}%` } },
         ],
+        [Op.and]: [
+          { id: { [Op.not]: 1 } } //req.rootUserId
+        ]
       },
     });
     res.status(200).send(users);
@@ -123,36 +123,33 @@ class UserController {
     );
     res.status(200);
   }
-  async updateProfilePic(req, res) {
+  async updateAvatar(req, res) {
     try {
-      // upload file
       let file;
       let uploadPath;
-
       if (!req.files || Object.keys(req.files).length === 0) {
         return res.status(400).send("No files were uploaded.");
       }
+
+      // The name of the input field (i.e. "file") is used to retrieve the uploaded file
       file = req.files.file;
-      uploadPath = "E:\\Do_An_5\\notip-client\\src\\assets\\images\\avatar-user" + file.name;
+
+      uploadPath = "E:\\Do_An_5\\notip-client\\src\\assets\\images\\avatar-user\\" + file.name;
+
+      // Use the mv() method to place the file somewhere on your server
       file.mv(uploadPath, function (err) {
         if (err) return res.status(500).send(err);
-
-        res.status(500).send("Failed to save image!");
       });
-
       // update user
-      const { profilePic } = req.body;
-      const updatedUser = await User.update(
-        {
-          profilePic: profilePic,
-        },
-        {
-          where: {
-            id: 1, //req.rootUserId
-          },
-        }
-      );
-      res.status(200);
+      // await Chat.update({
+      //     photo: file.name
+      //   },
+      //   {
+      //     where: {id: chatId}
+      //   })
+      await sequelize.query(`update users set avatar = "avatar-user\\${file.name}" where id = 5`) // req.rootUserId
+
+      res.status(200).send("Update avatar successful!");
     } catch (e) {
       res.status(500).send(e);
     }

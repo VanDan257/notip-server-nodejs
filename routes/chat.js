@@ -11,6 +11,9 @@ router.post("/", async (req, res) => {
 router.get("/get-all-chat", async (req, res) => {
   await chat.fetchAllChats(req, res);
 });
+router.get("/search-chat/:keySearch", async (req, res) => {
+  await chat.searchAllGroup(req, res);
+});
 router.get("/get-info-chat/:chatId", async (req, res) => {
   await chat.getInfo(req, res);
 });

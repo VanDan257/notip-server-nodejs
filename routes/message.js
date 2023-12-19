@@ -12,7 +12,7 @@ router.post('/send-message', async (req, res)=>{
     await message.sendMessage(req, res);
 })
 
-router.get('/get-messages', async (req, res)=>{
+router.get('/get-messages/:chatId', async (req, res)=>{
     await message.getMessages(req, res);
 })
 

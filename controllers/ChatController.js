@@ -4,6 +4,7 @@ const UserChat = require("../models/UserChat");
 const Message = require("../models/Message");
 const { Op } = require("sequelize");
 const sequelize = require("../mySQL/dbconnect");
+const Friend = require("../models/Friend");
 
 class ChatController {
   async accessChats(req, res) {
@@ -71,30 +72,29 @@ class ChatController {
       const lstChat = chats[0];
 
       for (let i = 0; i < lstChat.length; i++) {
-        if(lstChat[i].typeChatId == 1){
+        if (lstChat[i].typeChatId == 1) {
           var userChat = await UserChat.findOne({
             where: {
               chatId: lstChat[i].id,
               userId: {
-                [Op.ne]: 1 // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+                [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
               },
-            }
+            },
           });
 
-          if(userChat == null){
-            res.status(200).send("Not found user chat!")
+          if (userChat == null) {
+            res.status(200).send("Not found user chat!");
           }
 
           var user = await User.findByPk(userChat.userId);
           lstChat[i].chatName = user.name;
           lstChat[i].photo = user.avatar;
-
         }
       }
 
-      lstChat.sort((chat)=>{
-        chat.updatedAt
-      })
+      lstChat.sort((chat) => {
+        chat.updatedAt;
+      });
       res.status(200).json(lstChat);
     } catch (error) {
       res.status(500).send(error);
@@ -102,59 +102,127 @@ class ChatController {
     }
   }
 
-  async getInfo(req, res){
-    const {chatId} = req.params;
-    try{
+  async searchAllGroup(req, res) {
+    const { keySearch } = req.params;
+    try {
+      // search all chat groups
+      let chats = await sequelize.query(
+        "SELECT `Chats`.*  FROM `Chats` AS `Chats` INNER JOIN ( `UserChats` AS `Users->UserChats` INNER JOIN `Users` AS `Users` ON `Users`.`id` = `Users->UserChats`.`userId`) ON `Chats`.`id` = `Users->UserChats`.`chatId` AND `Users`.`id` = " +
+          1 + // req.rootUserId +
+          " WHERE Chats.chatName LIKE '%" +
+          keySearch +
+          "%'" +
+          " ORDER BY `Chats`.`updatedAt` DESC;"
+      );
+
+      const lstChat = chats[0];
+
+      for (let i = 0; i < lstChat.length; i++) {
+        if (lstChat[i].typeChatId == 1) {
+          var userChat = await UserChat.findOne({
+            where: {
+              chatId: lstChat[i].id,
+              userId: {
+                [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+              },
+            },
+          });
+
+          if (userChat == null) {
+            res.status(200).send("Not found user chat!");
+          }
+
+          var user = await User.findByPk(userChat.userId);
+          lstChat[i].chatName = user.name;
+          lstChat[i].photo = user.avatar;
+        }
+      }
+
+      lstChat.sort((chat) => {
+        chat.updatedAt;
+      });
+
+      // search all chat friend
+
+      let listFriendId = await Friend.findAll({ where: { senderId: 1 } }); // req.rootUserId
+      // let listFriends = [];
+      if (listFriendId != null) {
+        for (let i = 0; i < listFriendId.length; i++) {
+          let user = await User.findOne({
+            where: {
+              [Op.or]: [
+                { name: { [Op.like]: `%${keySearch}%` } },
+                { email: { [Op.like]: `%${keySearch}%` } },
+                { phone: { [Op.like]: `%${keySearch}%` } },
+              ],
+              id: listFriendId[i].recipientId,
+            },
+          });
+          console.log(user);
+          if (user != null)
+            lstChat.push({
+              ["userId"]: user.id,
+              chatName: user.name,
+              photo: user.avatar,
+            });
+        }
+      }
+
+      res.status(200).json(lstChat);
+    } catch (error) {
+      res.status(500).send(error);
+      console.log(error);
+    }
+  }
+
+  async getInfo(req, res) {
+    const { chatId } = req.params;
+    try {
       let chat = await Chat.findByPk(chatId);
 
       // neu chat thuoc loai tin nhan rieng (1-1) => tra ve thong tin nguoi chat
-      if(chat.typeChatId == 1){
+      if (chat.typeChatId == 1) {
         let userChat = await UserChat.findOne({
           where: {
             chatId: chat.id,
             userId: {
-              [Op.ne]: 1 // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+              [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
             },
-          }
+          },
         });
 
-        if(userChat == null){
-          res.status(200).send("Not found user chat!")
+        if (userChat == null) {
+          res.status(200).send("Not found user chat!");
         }
 
         let user = await User.findByPk(userChat.userId);
 
         res.status(200).json(user);
-      }
-
-      else{
+      } else {
         let userChat = await UserChat.findAll({
           where: {
             chatId: chat.id,
             userId: {
-              [Op.ne]: 1 // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+              [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
             },
-          }
+          },
         });
 
-        if(userChat == null){
-          res.status(200).send("Not found user chat!")
+        if (userChat == null) {
+          res.status(200).send("Not found user chat!");
         }
 
         let lstUser = [];
         for (let i = 0; i < userChat.length; i++) {
-          let user = await User.findByPk(userChat[i].userId,
-            {
-              attributes: { exclude: ['password'] }, // Loại bỏ cột password khỏi kết quả trả về
-            }
-        );
+          let user = await User.findByPk(userChat[i].userId, {
+            attributes: { exclude: ["password"] }, // Loại bỏ cột password khỏi kết quả trả về
+          });
           lstUser.push(user);
         }
 
-        res.status(200).json({chat: chat, users: lstUser});
+        res.status(200).json({ chat: chat, users: lstUser });
       }
-    }
-    catch (e) {
+    } catch (e) {
       res.status(500).json(e);
     }
   }
@@ -162,25 +230,24 @@ class ChatController {
   async creatGroup(req, res) {
     const { chatName, typeChatId, userIds } = req.body;
 
-    console.log(typeof(userIds));
+    console.log(typeof userIds);
 
     let chat = await Chat.create({
       chatName: chatName,
-      typeChatId: typeChatId
+      typeChatId: typeChatId,
     });
 
     await UserChat.create({
       chatId: chat.id,
-      userId: 1 // req.rootUserId
-    })
+      userId: 1, // req.rootUserId
+    });
 
     for (let i = 0; i < userIds.length; i++) {
       await UserChat.create({
         chatId: chat.id,
-        userId: userIds[i]
-      })
+        userId: userIds[i],
+      });
     }
-
   }
   async renameGroup(req, res) {
     const { chatId, chatName } = req.body;
@@ -201,31 +268,39 @@ class ChatController {
     }
   }
 
-  async updateChatPhoto(req, res){
-    const {chatId} = req.params;
-    let file;
-    let uploadPath;
-    if (!req.files || Object.keys(req.files).length === 0) {
-      return res.status(400).send("No files were uploaded.");
+  async updateChatPhoto(req, res) {
+    try {
+      const { chatId } = req.body;
+      let file;
+      let uploadPath;
+      if (!req.files || Object.keys(req.files).length === 0) {
+        return res.status(400).send("No files were uploaded.");
+      }
+
+      // The name of the input field (i.e. "file") is used to retrieve the uploaded file
+      file = req.files.file;
+
+      uploadPath =
+        "E:\\Do_An_5\\notip-client\\src\\assets\\images\\photo-chat\\" +
+        file.name;
+
+      // Use the mv() method to place the file somewhere on your server
+      file.mv(uploadPath, function (err) {
+        if (err) return res.status(500).send(err);
+      });
+
+      await Chat.update(
+        {
+          photo: "photo-chat\\" + file.name,
+        },
+        {
+          where: { id: chatId },
+        }
+      );
+      res.status(200).send("Upload chat's photo successful!");
+    } catch (e) {
+      res.status(500).json(e);
     }
-
-    // The name of the input field (i.e. "file") is used to retrieve the uploaded file
-    file = req.files.file;
-    console.log('file: ', file)
-
-    uploadPath = "E:\\Do_An_5\\notip-client\\src\\assets\\images\\photo-chat" + file.name;
-
-    // Use the mv() method to place the file somewhere on your server
-    file.mv(uploadPath, function (err) {
-      if (err) return res.status(500).send(err);
-    });
-
-    await Chat.update({
-      photo: file.name
-    },
-    {
-      where: {id: chatId}
-    })
   }
 
   async addToGroup(req, res) {
