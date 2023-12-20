@@ -65,7 +65,7 @@ class ChatController {
     try {
       let chats = await sequelize.query(
         "SELECT `Chats`.*  FROM `Chats` AS `Chats` INNER JOIN ( `UserChats` AS `Users->UserChats` INNER JOIN `Users` AS `Users` ON `Users`.`id` = `Users->UserChats`.`userId`) ON `Chats`.`id` = `Users->UserChats`.`chatId` AND `Users`.`id` = " +
-          1 + // req.rootUserId +
+          req.rootUserId +
           " ORDER BY `Chats`.`updatedAt` DESC;"
       );
 
@@ -108,7 +108,7 @@ class ChatController {
       // search all chat groups
       let chats = await sequelize.query(
         "SELECT `Chats`.*  FROM `Chats` AS `Chats` INNER JOIN ( `UserChats` AS `Users->UserChats` INNER JOIN `Users` AS `Users` ON `Users`.`id` = `Users->UserChats`.`userId`) ON `Chats`.`id` = `Users->UserChats`.`chatId` AND `Users`.`id` = " +
-          1 + // req.rootUserId +
+          req.rootUserId +
           " WHERE Chats.chatName LIKE '%" +
           keySearch +
           "%'" +
@@ -123,7 +123,7 @@ class ChatController {
             where: {
               chatId: lstChat[i].id,
               userId: {
-                [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+                [Op.ne]: req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
               },
             },
           });
@@ -144,7 +144,9 @@ class ChatController {
 
       // search all chat friend
 
-      let listFriendId = await Friend.findAll({ where: { senderId: 1 } }); // req.rootUserId
+      let listFriendId = await Friend.findAll({
+        where: { senderId: req.rootUserId },
+      });
       // let listFriends = [];
       if (listFriendId != null) {
         for (let i = 0; i < listFriendId.length; i++) {
@@ -186,7 +188,7 @@ class ChatController {
           where: {
             chatId: chat.id,
             userId: {
-              [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+              [Op.ne]: req.rootUserId, // Sử dụng Op.ne để loại trừ userId = req.rootUserId
             },
           },
         });
@@ -203,7 +205,7 @@ class ChatController {
           where: {
             chatId: chat.id,
             userId: {
-              [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+              [Op.ne]: req.rootUserId,
             },
           },
         });
@@ -305,8 +307,6 @@ class ChatController {
 
   async addToGroup(req, res) {
     const { userId, chatId } = req.body;
-    // const existing = await Chat.findOne({where: { id: chatId }});
-    // if (!existing.users.includes(userId)) {
     // Cập nhật dữ liệu
     const userChat = await UserChat.create({
       userId: userId,

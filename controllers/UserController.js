@@ -14,7 +14,12 @@ class UserController {
 
       if (existingUser)
         return res.status(200).json({ error: "User already Exits" });
-      const newuser = new User({ email: email, password: password, name: username, phone: phone });
+      const newuser = new User({
+        email: email,
+        password: password,
+        name: username,
+        phone: phone,
+      });
       const token = await newuser.generateAuthToken();
       await newuser.save();
       res.json({ message: "success", token: token });
@@ -25,7 +30,7 @@ class UserController {
   }
   async login(req, res) {
     const { email, password } = req.body;
-    console.log('email: ', email, 'password: ', password);
+    console.log("email: ", email, "password: ", password);
     try {
       const valid = await User.findOne({ where: { email: email } });
 
@@ -40,12 +45,13 @@ class UserController {
           httpOnly: true,
           maxAge: 24 * 60 * 60 * 1000,
         });
-        res.status(200).json({data: {
-          id: valid.id,
-          name: valid.name,
-          token: token,
-          photoUrl: valid.avatar,
-        },
+        res.status(200).json({
+          data: {
+            id: valid.id,
+            name: valid.name,
+            token: token,
+            photoUrl: valid.avatar,
+          },
           status: 200,
         });
       }
@@ -78,7 +84,7 @@ class UserController {
 
   async searchUsers(req, res) {
     // const excludedUserId = req.rootUserId; // Lấy ID của người dùng hiện tại
-    const {keySearch} = req.params
+    const { keySearch } = req.params;
     const users = await User.findAll({
       where: {
         [Op.or]: [
@@ -86,9 +92,7 @@ class UserController {
           { email: { [Op.like]: `%${keySearch}%` } },
           { phone: { [Op.like]: `%${keySearch}%` } },
         ],
-        [Op.and]: [
-          { id: { [Op.not]: 1 } } //req.rootUserId
-        ]
+        [Op.and]: [{ id: { [Op.not]: req.rootUserId } }],
       },
     });
     res.status(200).send(users);
@@ -96,7 +100,6 @@ class UserController {
   async getUserById(req, res) {
     const { id } = req.params;
     try {
-      // const selectedUser = await user.findOne({ _id: id }).select('-password');
       const selectedUser = await User.findOne({
         where: { id: id },
         attributes: { exclude: ["password"] },
@@ -108,7 +111,6 @@ class UserController {
     }
   }
   async updateInfo(req, res) {
-    const { id } = req.params;
     const { bio, name } = req.body;
     const updatedUser = await User.update(
       {
@@ -117,7 +119,7 @@ class UserController {
       },
       {
         where: {
-          id: id, // Cập nhật người dùng có ID tương ứng
+          id: req.rootUserId, // Cập nhật người dùng có ID tương ứng
         },
       }
     );
@@ -134,20 +136,17 @@ class UserController {
       // The name of the input field (i.e. "file") is used to retrieve the uploaded file
       file = req.files.file;
 
-      uploadPath = "E:\\Do_An_5\\notip-client\\src\\assets\\images\\avatar-user\\" + file.name;
+      uploadPath =
+        "E:\\Do_An_5\\notip-client\\src\\assets\\images\\avatar-user\\" +
+        file.name;
 
       // Use the mv() method to place the file somewhere on your server
       file.mv(uploadPath, function (err) {
         if (err) return res.status(500).send(err);
       });
-      // update user
-      // await Chat.update({
-      //     photo: file.name
-      //   },
-      //   {
-      //     where: {id: chatId}
-      //   })
-      await sequelize.query(`update users set avatar = "avatar-user\\${file.name}" where id = 5`) // req.rootUserId
+      await sequelize.query(
+        `update users set avatar = "avatar-user\\${file.name}" where id = ${req.rootUserId}`
+      );
 
       res.status(200).send("Update avatar successful!");
     } catch (e) {
@@ -156,28 +155,26 @@ class UserController {
   }
 
   async putHubConnection(req, res) {
-    try{
+    try {
       const { key } = req.body;
       const userSession = req.rootUserId;
-      const user = await User.findByPk(userSession)
+      const user = await User.findByPk(userSession);
 
-      if(user != null){
+      if (user != null) {
         user.currentSession = key;
         await User.update(
-            {
-              currentSession: key
-            },
-            {
-              where: {id: userSession}
-            }
+          {
+            currentSession: key,
+          },
+          {
+            where: { id: userSession },
+          }
         );
         res.status(200);
-      }
-      else{
+      } else {
         res.status(200).send("Not found current user!");
       }
-    }
-    catch (e){
+    } catch (e) {
       res.status(500).json(e);
     }
   }

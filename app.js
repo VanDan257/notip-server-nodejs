@@ -80,6 +80,7 @@ io.on("connection", (socket) => {
     socket.emit("connected");
   });
   socket.on("join room", (room) => {
+    // console.log(room);
     socket.join(room);
   });
   socket.on("typing", (room) => socket.in(room).emit("typing"));
@@ -92,16 +93,14 @@ io.on("connection", (socket) => {
       console.log("chats is not defined");
     }
 
-    const users = await sequelize.query(
-      "SELECT `users`.*  FROM `Users` AS `Users` INNER JOIN `UserChats` AS `UserChats` ON `Users`.`id` = `UserChats`.`userId` WHERE `UserChats`.`chatId` = " +
-        chatId
-    );
+    // const users = await sequelize.query(
+    //   "SELECT `users`.*  FROM `Users` AS `Users` INNER JOIN `UserChats` AS `UserChats` ON `Users`.`id` = `UserChats`.`userId` WHERE `UserChats`.`chatId` = " +
+    //     chatId
+    // );
 
-    //   if (!chat.users) console.log("chats.users is not defined");
-    for (var user of users) {
-      socket.in(user.id).emit("message recieved", newMessageRecieve);
-    }
-    //   if (user.id == newMessageRecieve.senderId) return;
+    // for (var user of users) {
+    socket.in(chatId).emit("message recieved", newMessageRecieve);
+    // }
   });
 });
 

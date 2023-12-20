@@ -1,5 +1,5 @@
-const express =require('express');
-const Auth = require('../middleware/userAuth.js');
+const express = require("express");
+const Auth = require("../middleware/userAuth.js");
 const MessageController = require("../controllers/MessageController");
 const router = express.Router();
 
@@ -8,12 +8,12 @@ const router = express.Router();
 // });
 let message = new MessageController();
 
-router.post('/send-message', async (req, res)=>{
-    await message.sendMessage(req, res);
-})
+router.post("/send-message", Auth, async (req, res) => {
+  await message.sendMessage(req, res);
+});
 
-router.get('/get-messages/:chatId', async (req, res)=>{
-    await message.getMessages(req, res);
-})
+router.get("/get-messages/:chatId", Auth, async (req, res) => {
+  await message.getMessages(req, res);
+});
 
 module.exports = router;

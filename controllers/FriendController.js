@@ -9,7 +9,7 @@ class FriendController {
     const { recipientId } = req.body;
     try {
       const friendStatus = await Friend.create({
-        senderId: 1, // req.rootUserId
+        senderId: req.rootUserId,
         recipientId: recipientId,
         friendStatusId: 1,
       });
@@ -36,9 +36,8 @@ class FriendController {
   async getListFriends(req, res) {
     try {
       let listFriendsId = await Friend.findAll({
-        where: { senderId: 1, friendStatusId: { [Op.ne]: 3 } },
+        where: { senderId: req.rootUserId, friendStatusId: { [Op.ne]: 3 } },
       });
-      console.log(listFriendsId);
 
       let listFriends = [];
       if (listFriendsId) {

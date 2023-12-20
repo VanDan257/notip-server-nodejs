@@ -16,19 +16,19 @@ router.post("/account/login", async (req, res) => {
 router.get("/auth/valid", async (req, res) => {
   await user.validUser(req, res);
 });
-router.get("/auth/logout", async (req, res) => {
+router.get("/auth/logout", Auth, async (req, res) => {
   await user.logout(req, res);
 });
-router.get("/user/search/:keySearch", async (req, res) => {
+router.get("/user/search/:keySearch", Auth, async (req, res) => {
   await user.searchUsers(req, res);
 });
-router.get("/user/:id", async (req, res) => {
+router.get("/user/:id", Auth, async (req, res) => {
   await user.getUserById(req, res);
 });
-router.patch("/user/update/:id", async (req, res) => {
+router.patch("/user/update/:id", Auth, async (req, res) => {
   await user.updateInfo(req, res);
 });
-router.post("/user/update-avatar", async (req, res) => {
+router.post("/user/update-avatar", Auth, async (req, res) => {
   await user.updateAvatar(req, res);
 });
 module.exports = router;
