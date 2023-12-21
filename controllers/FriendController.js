@@ -33,10 +33,11 @@ class FriendController {
     }
   }
 
-  async getListFriends(req, res) {
+  async getListContacts(req, res) {
     try {
+      const { statusContact } = req.params;
       let listFriendsId = await Friend.findAll({
-        where: { senderId: req.rootUserId, friendStatusId: { [Op.ne]: 3 } },
+        where: { senderId: req.rootUserId, friendStatusId: statusContact },
       });
 
       let listFriends = [];
@@ -48,6 +49,7 @@ class FriendController {
       } else {
         res.status(300).send("You haven't any friend yet;");
       }
+      console.log("list friend: ", listFriends);
       res.status(200).json(listFriends);
     } catch (e) {
       res.status(500).send(e);
