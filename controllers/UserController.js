@@ -30,17 +30,20 @@ class UserController {
   }
   async login(req, res) {
     const { email, password } = req.body;
-    console.log("email: ", email, "password: ", password);
     try {
       const valid = await User.findOne({ where: { email: email } });
 
       if (!valid) res.status(200).json({ message: "User don't exist" });
       const validPassword = await bcrypt.compare(password, valid.password);
+      console.log("Password: ", password);
+      console.log("valid.password: ", valid.password);
+
       if (!validPassword) {
         res.status(200).json({ message: "Invalid Password" });
       } else {
         const token = await valid.generateAuthToken();
         await valid.save();
+        console.log("token: ", token);
         res.cookie("userToken", token, {
           httpOnly: true,
           maxAge: 24 * 60 * 60 * 1000,
@@ -97,6 +100,9 @@ class UserController {
     });
     res.status(200).send(users);
   }
+  // async getProfile(req, res){
+
+  // }
   async getUserById(req, res) {
     const { id } = req.params;
     try {

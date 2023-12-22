@@ -6,7 +6,7 @@ var logger = require("morgan");
 var bodyParser = require("body-parser"); // npm i body-parser
 var fileUpLoad = require("express-fileupload"); // npm iexpress-fileupload
 const cors = require("cors");
-const Server = require("socket.io");
+const { Server } = require("socket.io");
 require("dotenv").config();
 const User = require("./models/User");
 const UserChat = require("./models/UserChat");
@@ -15,34 +15,37 @@ var chatsRouter = require("./routes/chat");
 var messageRouter = require("./routes/message");
 var friendRouter = require("./routes/friend");
 const sequelize = require("./mySQL/dbconnect");
+const { createServer } = require("http");
 
-var app = express();
+const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    credentials: true,
+  },
+});
 
 // Cài đặt CORS
-app.options("*", cors());
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
 
-const corsOptions = {
-  origin: process.env.BASE_URL,
-};
-
-app.use(cors(corsOptions));
+// uploadfile
+app.use(fileUpLoad());
+app.use(logger("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, "public")));
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
-// body-parser
-app.use(bodyParser.urlencoded({ extended: false }));
-
-// uploadfile
-app.use(fileUpLoad());
-
-app.use(logger("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
-
+// routers
 app.use("/api", usersRouter);
 app.use("/api/chat", chatsRouter);
 app.use("/api/message", messageRouter);
@@ -64,34 +67,28 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 
-const server = app.listen(process.env.PORT, () => {
+server.listen(process.env.PORT, () => {
   console.log(`Server Listening at PORT - ${process.env.PORT}`);
 });
 
-const io = new Server.Server(server, {
-  pingTimeout: 60000,
-  cors: {
-    origin: process.env.BASE_URL,
-  },
-});
 io.on("connection", (socket) => {
-  socket.on("setup", (userData) => {
-    socket.join(userData.id);
-    socket.emit("connected");
-  });
-  socket.on("join room", (room) => {
-    // console.log(room);
-    socket.join(room);
-  });
-  socket.on("typing", (room) => socket.in(room).emit("typing"));
-  socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+  // socket.on("setup", (userData) => {
+  //   socket.join();
+  //   socket.emit("connected");
+  // });
 
-  socket.on("new message", async (newMessageRecieve) => {
-    console.log(newMessageRecieve);
-    var chatId = newMessageRecieve.chatId;
-    if (chatId == null) {
-      console.log("chats is not defined");
-    }
+  socket.on("join-room", ({ chatId }) => {
+    socket.join(chatId);
+  });
+  // socket.on("typing", (room) => socket.in(room).emit("typing"));
+  // socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+
+  socket.on("new-message", async ({ chatId, content, type }) => {
+    // console.log(newMessageRecieve);
+    // var chatId = newMessageRecieve.chatId;
+    // if (chatId == null) {
+    //   console.log("chats is not defined");
+    // }
 
     // const users = await sequelize.query(
     //   "SELECT `users`.*  FROM `Users` AS `Users` INNER JOIN `UserChats` AS `UserChats` ON `Users`.`id` = `UserChats`.`userId` WHERE `UserChats`.`chatId` = " +
@@ -99,8 +96,12 @@ io.on("connection", (socket) => {
     // );
 
     // for (var user of users) {
-    socket.in(chatId).emit("message recieved", newMessageRecieve);
+    socket.to(chatId).emit("message-recieved", { content, type });
     // }
+  });
+
+  socket.on("leave-room", ({ chatId }) => {
+    socket.leave(chatId);
   });
 });
 
