@@ -35,15 +35,12 @@ class UserController {
 
       if (!valid) res.status(200).json({ message: "User don't exist" });
       const validPassword = await bcrypt.compare(password, valid.password);
-      console.log("Password: ", password);
-      console.log("valid.password: ", valid.password);
 
       if (!validPassword) {
         res.status(200).json({ message: "Invalid Password" });
       } else {
         const token = await valid.generateAuthToken();
         await valid.save();
-        console.log("token: ", token);
         res.cookie("userToken", token, {
           httpOnly: true,
           maxAge: 24 * 60 * 60 * 1000,
@@ -104,10 +101,9 @@ class UserController {
 
   // }
   async getUserById(req, res) {
-    const { id } = req.params;
     try {
       const selectedUser = await User.findOne({
-        where: { id: id },
+        where: { id: req.rootUserId },
         attributes: { exclude: ["password"] },
       });
 
@@ -117,19 +113,25 @@ class UserController {
     }
   }
   async updateInfo(req, res) {
-    const { bio, name } = req.body;
+    const userProfile = req.body;
     const updatedUser = await User.update(
       {
-        name,
-        bio,
+        name: userProfile.name,
+        gender: userProfile.gender,
+        dob: userProfile.dob,
+        phone: userProfile.phone,
+        email: userProfile.email,
+        address: userProfile.address,
       },
       {
         where: {
           id: req.rootUserId, // Cập nhật người dùng có ID tương ứng
         },
-      }
+      },
+      { individualHooks: true }
     );
-    res.status(200);
+
+    res.status(200).json(await User.findByPk(req.rootUserId));
   }
   async updateAvatar(req, res) {
     try {
@@ -150,80 +152,19 @@ class UserController {
       file.mv(uploadPath, function (err) {
         if (err) return res.status(500).send(err);
       });
-      await sequelize.query(
-        `update users set avatar = "avatar-user\\${file.name}" where id = ${req.rootUserId}`
+
+      let user = await User.update(
+        { avatar: "avatar-user/" + file.name },
+        { where: { id: req.rootUserId } }
       );
 
-      res.status(200).send("Update avatar successful!");
+      console.log("user: ", user);
+
+      res.status(200).json(await User.findByPk(req.rootUserId));
     } catch (e) {
       res.status(500).send(e);
-    }
-  }
-
-  async putHubConnection(req, res) {
-    try {
-      const { key } = req.body;
-      const userSession = req.rootUserId;
-      const user = await User.findByPk(userSession);
-
-      if (user != null) {
-        user.currentSession = key;
-        await User.update(
-          {
-            currentSession: key,
-          },
-          {
-            where: { id: userSession },
-          }
-        );
-        res.status(200);
-      } else {
-        res.status(200).send("Not found current user!");
-      }
-    } catch (e) {
-      res.status(500).json(e);
     }
   }
 }
 
 module.exports = UserController;
-
-// export const googleAuth = async (req, res) => {
-//     try {
-//         const { tokenId } = req.body;
-//         const client = new OAuth2Client(process.env.CLIENT_ID);
-//         const verify = await client.verifyIdToken({
-//             idToken: tokenId,
-//             audience: process.env.CLIENT_ID,
-//         });
-//         const { email_verified, email, name, picture } = verify.payload;
-//         if (!email_verified) res.json({ message: 'Email Not Verified' });
-//         const userExist = await user.findOne({ email }).select('-password');
-//         if (userExist) {
-//             res.cookie('userToken', tokenId, {
-//                 httpOnly: true,
-//                 maxAge: 24 * 60 * 60 * 1000,
-//             });
-//             res.status(200).json({ token: tokenId, user: userExist });
-//         } else {
-//             const password = email + process.env.CLIENT_ID;
-//             const newUser = await user({
-//                 name: name,
-//                 profilePic: picture,
-//                 password,
-//                 email,
-//             });
-//             await newUser.save();
-//             res.cookie('userToken', tokenId, {
-//                 httpOnly: true,
-//                 maxAge: 24 * 60 * 60 * 1000,
-//             });
-//             res
-//                 .status(200)
-//                 .json({ message: 'User registered Successfully', token: tokenId });
-//         }
-//     } catch (error) {
-//         res.status(500).json({ error: error });
-//         console.log('error in googleAuth backend' + error);
-//     }
-// };

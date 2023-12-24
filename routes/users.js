@@ -22,10 +22,10 @@ router.get("/auth/logout", Auth, async (req, res) => {
 router.get("/user/search/:keySearch", Auth, async (req, res) => {
   await user.searchUsers(req, res);
 });
-router.get("/user/:id", Auth, async (req, res) => {
+router.get("/users/profile", Auth, async (req, res) => {
   await user.getUserById(req, res);
 });
-router.patch("/user/update/:id", Auth, async (req, res) => {
+router.post("/user/updateProfile", Auth, async (req, res) => {
   await user.updateInfo(req, res);
 });
 router.post("/user/update-avatar", Auth, async (req, res) => {

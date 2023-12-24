@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const moment = require("moment");
 
 const Auth = async (req, res, next) => {
   try {
@@ -11,6 +12,11 @@ const Auth = async (req, res, next) => {
       where: { id: verifiedUser.id },
       attributes: { exclude: ["password"] },
     });
+
+    await User.update(
+      { lastLogin: moment().format("YYYY-MM-DD HH:mm:ss") },
+      { where: { id: rootUser.id } }
+    );
 
     req.token = token;
     req.rootUser = rootUser;

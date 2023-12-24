@@ -2,14 +2,13 @@ const Message = require("../models/Message");
 const Chat = require("../models/Chat");
 const User = require("../models/User");
 const sequelize = require("../mySQL/dbconnect");
+const { where } = require("sequelize");
 
 class MessageController {
   async sendMessage(req, res) {
     const { chatId, content, type } = req.body;
 
     try {
-      let user = await User.findByPk(req.rootUserId);
-
       let file;
       if (req.files) {
         // The name of the input field (i.e. "file") is used to retrieve the uploaded file
@@ -35,9 +34,18 @@ class MessageController {
         chatId: chatId,
       });
 
+      msg.dataValues.senderPhoto = req.rootUser.avatar;
+      msg.dataValues.senderName = req.rootUser.name;
+
+      if (type == "media") msg.content = "Hình ảnh";
+      // await sequelize.query(
+      //   `update chats set lastestMessage = '${msg.content}' where id = ${chatId}`
+      // );
+
       await Chat.update(
-        { latestMessage: msg.message },
-        { where: { id: chatId } }
+        { lastestMessage: msg.content },
+        { where: { id: chatId } },
+        { individualHooks: true }
       );
 
       res.status(200).json(msg);

@@ -31,10 +31,6 @@ class ChatController {
       ],
     });
 
-    // chatExists = await user.populate(chatExists, {
-    //     path: 'latestMessage.sender',
-    //     select: 'name email profilePic',
-    // });
     if (chatExists.length > 0) {
       res.status(200).send(chatExists[0]);
     } else {
@@ -182,7 +178,6 @@ class ChatController {
     try {
       let chat = await Chat.findByPk(chatId);
 
-      // neu chat thuoc loai tin nhan rieng (1-1) => tra ve thong tin nguoi chat
       if (chat.typeChatId == 1) {
         let userChat = await UserChat.findOne({
           where: {
@@ -199,7 +194,10 @@ class ChatController {
 
         let user = await User.findByPk(userChat.userId);
 
-        res.status(200).json(user);
+        if (chat.chatName == null) chat.chatName = user.name;
+        chat.photo = user.avatar;
+
+        res.status(200).json({ chat: chat, user: user });
       } else {
         let userChat = await UserChat.findAll({
           where: {
@@ -291,7 +289,7 @@ class ChatController {
         if (err) return res.status(500).send(err);
       });
 
-      await Chat.update(
+      let chat = await Chat.update(
         {
           photo: "photo-chat\\" + file.name,
         },
@@ -299,7 +297,7 @@ class ChatController {
           where: { id: chatId },
         }
       );
-      res.status(200).send("Upload chat's photo successful!");
+      res.status(200).json(chat);
     } catch (e) {
       res.status(500).json(e);
     }

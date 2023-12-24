@@ -33,11 +33,25 @@ class FriendController {
     }
   }
 
-  async getListContacts(req, res) {
+  async removeBlockUser(req, res) {
+    const { friendId } = req.body;
     try {
-      const { statusContact } = req.params;
+      const friend = await Friend.findByPk(friendId); // Tìm user dựa trên ID
+      if (friend) {
+        await friend.destroy(); // Xóa user
+        res.status(200).json({ message: "Remove block user successfully" });
+      } else {
+        res.status(304).json({ message: "Remove block user failed" });
+      }
+    } catch (e) {
+      res.status(500).send(e);
+    }
+  }
+
+  async getListFriends(req, res) {
+    try {
       let listFriendsId = await Friend.findAll({
-        where: { senderId: req.rootUserId, friendStatusId: statusContact },
+        where: { senderId: req.rootUserId, friendStatusId: 2 },
       });
 
       let listFriends = [];
@@ -49,7 +63,27 @@ class FriendController {
       } else {
         res.status(300).send("You haven't any friend yet;");
       }
-      console.log("list friend: ", listFriends);
+      res.status(200).json(listFriends);
+    } catch (e) {
+      res.status(500).send(e);
+    }
+  }
+
+  async getListFriendInvites(req, res) {
+    try {
+      let listFriendsId = await Friend.findAll({
+        where: { recipientId: req.rootUserId, friendStatusId: 1 },
+      });
+
+      let listFriends = [];
+      if (listFriendsId) {
+        for (let i = 0; i < listFriendsId.length; i++) {
+          let user = await User.findByPk(listFriendsId[i].senderId);
+          if (user) listFriends.push(user);
+        }
+      } else {
+        res.status(300).send("You haven't any friend yet;");
+      }
       res.status(200).json(listFriends);
     } catch (e) {
       res.status(500).send(e);
@@ -60,7 +94,6 @@ class FriendController {
     const { name } = req.params;
     try {
       let listFriendId = await Friend.findAll({ where: { senderId: 1 } });
-      console.log(name);
       let listFriends = [];
       if (listFriendId != null) {
         for (let i = 0; i < listFriendId.length; i++) {

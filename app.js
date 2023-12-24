@@ -71,38 +71,24 @@ server.listen(process.env.PORT, () => {
   console.log(`Server Listening at PORT - ${process.env.PORT}`);
 });
 
-io.on("connection", (socket) => {
-  // socket.on("setup", (userData) => {
-  //   socket.join();
-  //   socket.emit("connected");
-  // });
+const chatNamespace = io.of("/chat");
+let userRoomChats = [];
 
-  socket.on("join-room", ({ chatId }) => {
-    socket.join(chatId);
+chatNamespace.on("connection", (socket) => {
+  socket.on("join-room", (room) => {
+    userRoomChats.push(socket.id);
+    socket.join(room);
   });
   // socket.on("typing", (room) => socket.in(room).emit("typing"));
   // socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("new-message", async ({ chatId, content, type }) => {
-    // console.log(newMessageRecieve);
-    // var chatId = newMessageRecieve.chatId;
-    // if (chatId == null) {
-    //   console.log("chats is not defined");
-    // }
-
-    // const users = await sequelize.query(
-    //   "SELECT `users`.*  FROM `Users` AS `Users` INNER JOIN `UserChats` AS `UserChats` ON `Users`.`id` = `UserChats`.`userId` WHERE `UserChats`.`chatId` = " +
-    //     chatId
-    // );
-
-    // for (var user of users) {
-    socket.to(chatId).emit("message-recieved", { content, type });
-    // }
+  socket.on("new-message", async (payload) => {
+    console.log("chatName: ", payload.chatName);
+    socket.to(payload.chatName).emit("message-received", payload);
   });
 
-  socket.on("leave-room", ({ chatId }) => {
-    socket.leave(chatId);
+  socket.on("leave-room", () => {
+    socket.leave("roomChat");
+    userRoomChats = userRoomChats.filter((id) => id !== socket.id);
   });
 });
-
-// module.exports = app;
