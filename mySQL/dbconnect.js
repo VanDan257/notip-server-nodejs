@@ -22,4 +22,9 @@ sequelize
     console.error("Không thể kết nối đến cơ sở dữ liệu:", err);
   });
 
+// (async () => {
+//   await sequelize.sync(); // This will create the table if it doesn't exist
+//   console.log("database notip synced");
+// })();
+
 module.exports = sequelize;

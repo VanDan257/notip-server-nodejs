@@ -16,16 +16,16 @@ const Chat = sequelize.define(
     chatName: {
       type: DataTypes.STRING,
     },
-    lastestMessage:{
+    lastestMessage: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     typeChatId: {
-        type: DataTypes.INTEGER,
-        references: {
-          model: 'TypeChats',
-          key: 'id'
-        }
+      type: DataTypes.INTEGER,
+      references: {
+        model: "TypeChats",
+        key: "id",
+      },
     },
   },
   {
@@ -34,10 +34,5 @@ const Chat = sequelize.define(
 );
 
 // Define relationships between Chat, User, and Message models here if needed
-
-// (async () => {
-//     await sequelize.sync(); // This will create the table if it doesn't exist
-//     console.log('Chat table synced');
-// })();
 
 module.exports = Chat;

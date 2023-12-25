@@ -1,6 +1,6 @@
 const User = require("../models/User.js");
 const bcrypt = require("bcryptjs");
-const { Sequelize } = require("sequelize");
+const { Sequelize, where } = require("sequelize");
 const Chat = require("../models/Chat");
 const sequelize = require("../mySQL/dbconnect");
 const Op = require("sequelize").Op;
@@ -13,7 +13,7 @@ class UserController {
       const existingUser = await User.findOne({ where: { email: email } });
 
       if (existingUser)
-        return res.status(200).json({ error: "User already Exits" });
+        return res.status(400).json({ message: "Email đã tồn tại" });
       const newuser = new User({
         email: email,
         password: password,
@@ -24,7 +24,6 @@ class UserController {
       await newuser.save();
       res.json({ message: "success", token: token });
     } catch (error) {
-      console.log("Error in register " + error);
       res.status(500).send(error);
     }
   }
@@ -95,6 +94,18 @@ class UserController {
         [Op.and]: [{ id: { [Op.not]: req.rootUserId } }],
       },
     });
+
+    if (users != null) {
+      for (const user of users) {
+        const currentUserInvitedFriend = Friend.findAll({
+          where: [{ senderId: req.rootUserId }, { recipientId: user.Id }],
+        });
+        const userInvitedFriend = Friend.findAll({
+          where: [{ recipientId: req.rootUserId }, { senderId: user.Id }],
+        });
+      }
+    }
+
     res.status(200).send(users);
   }
   // async getProfile(req, res){
