@@ -39,8 +39,6 @@ const Friend = sequelize.define(
   }
 );
 
-// Friend.belongsTo(User, { foreignKey: 'senderId', as: 'Senders' }); // Replace 'User' with your User model name and 'senderId' with the appropriate foreign key
-// Friend.belongsTo(User, { foreignKey: 'recipientId', as: 'Recipients' }); // Replace 'User' with your User model name and 'senderId' with the appropriate foreign key
 Friend.belongsTo(FriendStatus, { foreignKey: "friendStatusId" }); // Replace 'Chat' with your Chat model name and 'chatId' with the appropriate foreign key
 
 module.exports = Friend;

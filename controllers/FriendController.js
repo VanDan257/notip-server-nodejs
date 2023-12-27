@@ -1,8 +1,6 @@
 const Friend = require("../models/Friend");
-const sequelize = require("../mySQL/dbconnect");
 const User = require("../models/User");
 const { Op } = require("sequelize");
-const { QueryTypes } = require("sequelize");
 
 class FriendController {
   async SendInvite(req, res) {
@@ -114,6 +112,39 @@ class FriendController {
       res.status(200).json(listFriends);
     } catch (e) {
       res.status(500).send(e);
+    }
+  }
+
+  async searchUserInFriendPage(req, res) {
+    const { keySearch } = req.params;
+    try {
+      const users = await User.findAll({
+        where: {
+          [Op.or]: [
+            { name: { [Op.like]: `%${keySearch}%` } },
+            { email: { [Op.like]: `%${keySearch}%` } },
+            { phone: { [Op.like]: `%${keySearch}%` } },
+          ],
+          [Op.and]: [{ id: { [Op.not]: req.rootUserId } }],
+        },
+      });
+      if (users != null) {
+        for (const user of users) {
+          const currentUserInvitedFriend = await Friend.findAll({
+            where: {
+              [Op.or]: [{ senderId: req.rootUserId }, { senderId: user.id }],
+            },
+          });
+          const userInvitedFriend = await Friend.findAll({
+            where: [{ recipientId: req.rootUserId }, { senderId: user.id }],
+          });
+          console.log("currentUserInvitedFriend: ", currentUserInvitedFriend);
+          console.log("userInvitedFriend: ", userInvitedFriend);
+        }
+      }
+      res.status(200).send(users);
+    } catch (e) {
+      res.status(500).send({ message: "Đã có lỗi xảy ra!" });
     }
   }
 }

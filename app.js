@@ -1,22 +1,16 @@
-var createError = require("http-errors");
-var express = require("express");
-var path = require("path");
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
-var bodyParser = require("body-parser"); // npm i body-parser
-var fileUpLoad = require("express-fileupload"); // npm iexpress-fileupload
+const createError = require("http-errors");
+const express = require("express");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+const logger = require("morgan");
+const bodyParser = require("body-parser"); // npm i body-parser
+const fileUpLoad = require("express-fileupload"); // npm iexpress-fileupload
 const cors = require("cors");
 const { Server } = require("socket.io");
 require("dotenv").config();
-const User = require("./models/User");
-const UserChat = require("./models/UserChat");
-var usersRouter = require("./routes/users");
-var chatsRouter = require("./routes/chat");
-var messageRouter = require("./routes/message");
-var friendRouter = require("./routes/friend");
-const sequelize = require("./mySQL/dbconnect");
+const { router } = require("./routes/index");
+const { routerAdmin } = require("./routes/admin/admin.router");
 const { createServer } = require("http");
-
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -45,11 +39,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
-// routers
-app.use("/api", usersRouter);
-app.use("/api/chat", chatsRouter);
-app.use("/api/message", messageRouter);
-app.use("/api/friend", friendRouter);
+// config router
+router(app);
+routerAdmin(app);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

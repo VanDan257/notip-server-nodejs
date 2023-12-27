@@ -1,9 +1,8 @@
 const User = require("../models/User.js");
 const bcrypt = require("bcryptjs");
-const { Sequelize, where } = require("sequelize");
-const Chat = require("../models/Chat");
-const sequelize = require("../mySQL/dbconnect");
 const Op = require("sequelize").Op;
+const Friend = require("../models/Friend");
+const UserRole = require("../models/UserRole.js");
 
 class UserController {
   async register(req, res) {
@@ -22,6 +21,10 @@ class UserController {
       });
       const token = await newuser.generateAuthToken();
       await newuser.save();
+      await UserRole.create({
+        userId: newuser.id,
+        roleId: 1,
+      });
       res.json({ message: "success", token: token });
     } catch (error) {
       res.status(500).send(error);
@@ -79,38 +82,29 @@ class UserController {
     req.rootUser.tokens = req.rootUser.tokens.filter(
       (e) => e.token != req.token
     );
+
+    res.status(200).json({ message: "Đăng xuất thành công!" });
   }
 
   async searchUsers(req, res) {
-    // const excludedUserId = req.rootUserId; // Lấy ID của người dùng hiện tại
     const { keySearch } = req.params;
-    const users = await User.findAll({
-      where: {
-        [Op.or]: [
-          { name: { [Op.like]: `%${keySearch}%` } },
-          { email: { [Op.like]: `%${keySearch}%` } },
-          { phone: { [Op.like]: `%${keySearch}%` } },
-        ],
-        [Op.and]: [{ id: { [Op.not]: req.rootUserId } }],
-      },
-    });
-
-    if (users != null) {
-      for (const user of users) {
-        const currentUserInvitedFriend = Friend.findAll({
-          where: [{ senderId: req.rootUserId }, { recipientId: user.Id }],
-        });
-        const userInvitedFriend = Friend.findAll({
-          where: [{ recipientId: req.rootUserId }, { senderId: user.Id }],
-        });
-      }
+    try {
+      const users = await User.findAll({
+        where: {
+          [Op.or]: [
+            { name: { [Op.like]: `%${keySearch}%` } },
+            { email: { [Op.like]: `%${keySearch}%` } },
+            { phone: { [Op.like]: `%${keySearch}%` } },
+          ],
+          [Op.and]: [{ id: { [Op.not]: req.rootUserId } }],
+        },
+      });
+      res.status(200).send(users);
+    } catch (err) {
+      res.status(500).send({ message: "Đã có lỗi xảy ra!" });
     }
-
-    res.status(200).send(users);
   }
-  // async getProfile(req, res){
 
-  // }
   async getUserById(req, res) {
     try {
       const selectedUser = await User.findOne({
@@ -176,6 +170,73 @@ class UserController {
       res.status(500).send(e);
     }
   }
+
+  async loginAdmin(req, res) {
+    const { email, password } = req.body;
+    try {
+      const valid = await User.findOne({ where: { email: email } });
+      if (!valid) res.status(200).json({ message: "User don't exist" });
+      const validPassword = await bcrypt.compare(password, valid.password);
+
+      if (!validPassword) {
+        res.status(200).json({ message: "Invalid Password" });
+      } else {
+        const userRole = await UserRole.findOne({
+          where: { userId: valid.id },
+        });
+        if (userRole.roleId === 2 || userRole.roleId === 3) {
+          const token = await valid.generateAuthToken();
+          await valid.save();
+          res.cookie("userToken", token, {
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000,
+          });
+          res.status(200).json({
+            data: {
+              id: valid.id,
+              name: valid.name,
+              token: token,
+              photoUrl: valid.avatar,
+            },
+          });
+        } else {
+          res.status(401).json({
+            message: "Bạn không có quyền truy cập vào trang quản trị",
+          });
+        }
+      }
+    } catch (error) {
+      res.status(500).json({ error: error });
+    }
+  }
+
+  async createAccountAdmin(req, res) {
+    const { username, phone, email, password } = req.body;
+    try {
+      const existingUser = await User.findOne({ where: { email: email } });
+
+      if (existingUser)
+        return res.status(400).json({ message: "Email đã tồn tại" });
+      const newuser = new User({
+        email: email,
+        password: password,
+        name: username,
+        phone: phone,
+      });
+      await newuser.save();
+      await UserRole.create({
+        userId: newuser.id,
+        roleId: 2,
+      });
+      res.json({ message: "success" });
+    } catch (error) {
+      res.status(500).send(error);
+    }
+  }
+
+  // async changeRoleAdmin(req, res) {
+
+  // }
 }
 
 module.exports = UserController;

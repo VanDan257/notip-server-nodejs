@@ -7,53 +7,52 @@ const sequelize = require("../mySQL/dbconnect");
 const Friend = require("../models/Friend");
 
 class ChatController {
-  async accessChats(req, res) {
+  async accessChatUser(req, res) {
     const { userId } = req.body;
-    if (!userId) res.send({ message: "Provide User's Id" });
-    let chatExists = await Chat.findAll({
-      where: {
-        isGroup: false,
-        [Op.and]: [
-          { "$users.id$": userId }, // Tìm chat có người dùng có ID là userId
-          { "$users.id$": req.rootUserId }, // Và cũng có người dùng có ID là rootUserId
-        ],
-      },
-      include: [
-        {
-          model: User,
-          as: "users",
-          attributes: { exclude: ["password"] }, // Loại bỏ trường password
-        },
-        {
-          model: Message,
-          as: "latestMessage",
-        },
-      ],
-    });
+    console.log(userId + "---" + req.rootUserId);
+    try {
+      let chatId = await sequelize.query(
+        `
+          SELECT chatId
+          FROM userchats
+          WHERE chatId IN (
+            SELECT chatId
+            FROM userchats
+            WHERE userId IN (` +
+          userId +
+          `, ` +
+          req.rootUserId +
+          `)
+            GROUP BY chatId
+            HAVING COUNT(DISTINCT userId) = 2
+          )
+          GROUP BY chatId
+          HAVING COUNT(*) = 2`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
 
-    if (chatExists.length > 0) {
-      res.status(200).send(chatExists[0]);
-    } else {
-      let data = {
-        chatName: "sender",
-        users: [userId, req.rootUserId],
-        isGroup: false,
-      };
-      try {
-        const newChat = await Chat.create(data);
-        const chat = await Chat.findByPk(newChat.id, {
-          include: [
-            {
-              model: User,
-              as: "users",
-              attributes: { exclude: ["password"] }, // Loại bỏ trường password
-            },
-          ],
+      let chat = new Chat();
+      if (chatId.length > 0) {
+        chat = await Chat.findByPk(chatId[0].chatId);
+      } else {
+        console.log("chạy vào đây");
+        chat = await Chat.create({
+          typeChatId: 1,
         });
-        res.status(200).json(chat);
-      } catch (error) {
-        res.status(500).send(error);
+
+        await UserChat.create({
+          chatId: chat.id,
+          userId: req.rootUserId,
+        });
+
+        await UserChat.create({
+          chatId: chat.id,
+          userId: userId,
+        });
       }
+      res.status(200).json(chat);
+    } catch (e) {
+      res.status(500).json(e);
     }
   }
 
@@ -62,10 +61,11 @@ class ChatController {
       let chats = await sequelize.query(
         "SELECT `Chats`.*  FROM `Chats` AS `Chats` INNER JOIN ( `UserChats` AS `Users->UserChats` INNER JOIN `Users` AS `Users` ON `Users`.`id` = `Users->UserChats`.`userId`) ON `Chats`.`id` = `Users->UserChats`.`chatId` AND `Users`.`id` = " +
           req.rootUserId +
-          " ORDER BY `Chats`.`updatedAt` DESC;"
+          " ORDER BY `Chats`.`updatedAt` DESC;",
+        { type: sequelize.QueryTypes.SELECT }
       );
 
-      const lstChat = chats[0];
+      const lstChat = chats;
 
       for (let i = 0; i < lstChat.length; i++) {
         if (lstChat[i].typeChatId == 1) {
@@ -108,11 +108,13 @@ class ChatController {
           " WHERE Chats.chatName LIKE '%" +
           keySearch +
           "%'" +
-          " ORDER BY `Chats`.`updatedAt` DESC;"
+          " ORDER BY `Chats`.`updatedAt` DESC;",
+        { type: sequelize.QueryTypes.SELECT }
       );
 
-      const lstChat = chats[0];
+      const lstChat = chats;
 
+      // Nếu roomChat là chat riêng tư (1-1) thì lấy tên và ảnh đối phương
       for (let i = 0; i < lstChat.length; i++) {
         if (lstChat[i].typeChatId == 1) {
           var userChat = await UserChat.findOne({
@@ -122,49 +124,52 @@ class ChatController {
                 [Op.ne]: req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
               },
             },
+            order: ["createdAt", "DESC"],
           });
 
           if (userChat == null) {
             res.status(200).send("Not found user chat!");
           }
 
-          var user = await User.findByPk(userChat.userId);
-          lstChat[i].chatName = user.name;
-          lstChat[i].photo = user.avatar;
+          var userInChat = await User.findByPk(userChat.userId);
+          lstChat[i].chatName = userInChat.name;
+          lstChat[i].photo = userInChat.avatar;
         }
       }
-
-      lstChat.sort((chat) => {
-        chat.updatedAt;
-      });
 
       // search all chat friend
 
-      let listFriendId = await Friend.findAll({
-        where: { senderId: req.rootUserId },
+      // let listFriendId = await Friend.findAll({
+      //   where: { senderId: req.rootUserId },
+      // });
+      // // let listFriends = [];
+      // if (listFriendId != null) {
+      //   for (let i = 0; i < listFriendId.length; i++) {
+
+      // Lấy các user có name, email, phone có chứa key search, convert thành chatroom
+      let user = await User.findAll({
+        where: {
+          [Op.or]: [
+            { name: { [Op.like]: `%${keySearch}%` } },
+            { email: { [Op.like]: `%${keySearch}%` } },
+            { phone: { [Op.like]: `%${keySearch}%` } },
+          ],
+          // id: listFriendId[i].recipientId,
+        },
       });
-      // let listFriends = [];
-      if (listFriendId != null) {
-        for (let i = 0; i < listFriendId.length; i++) {
-          let user = await User.findOne({
-            where: {
-              [Op.or]: [
-                { name: { [Op.like]: `%${keySearch}%` } },
-                { email: { [Op.like]: `%${keySearch}%` } },
-                { phone: { [Op.like]: `%${keySearch}%` } },
-              ],
-              id: listFriendId[i].recipientId,
-            },
+
+      if (user.length > 0) {
+        for (var i = 0; i < user.length; i++) {
+          lstChat.push({
+            ["userId"]: user[i].id,
+            chatName: user[i].name,
+            photo: user[i].avatar,
           });
-          console.log(user);
-          if (user != null)
-            lstChat.push({
-              ["userId"]: user.id,
-              chatName: user.name,
-              photo: user.avatar,
-            });
         }
       }
+
+      //   }
+      // }
 
       res.status(200).json(lstChat);
     } catch (error) {
@@ -228,25 +233,27 @@ class ChatController {
   }
 
   async creatGroup(req, res) {
-    const { chatName, typeChatId, userIds } = req.body;
+    const { chatName, users } = req.body;
+    try {
+      let chat = await Chat.create({
+        chatName: chatName,
+        typeChatId: 2,
+      });
 
-    console.log(typeof userIds);
-
-    let chat = await Chat.create({
-      chatName: chatName,
-      typeChatId: typeChatId,
-    });
-
-    await UserChat.create({
-      chatId: chat.id,
-      userId: 1, // req.rootUserId
-    });
-
-    for (let i = 0; i < userIds.length; i++) {
       await UserChat.create({
         chatId: chat.id,
-        userId: userIds[i],
+        userId: req.rootUserId,
       });
+
+      for (let i = 0; i < users.length; i++) {
+        await UserChat.create({
+          chatId: chat.id,
+          userId: users[i].id,
+        });
+      }
+      res.status(200).json(chat);
+    } catch (e) {
+      res.status(500).json({ message: "Đã có lỗi xảy ra!" });
     }
   }
   async renameGroup(req, res) {
@@ -317,41 +324,93 @@ class ChatController {
     //     res.status(409).send('user already exists');
     // }
   }
-  async removeFromGroup(req, res) {
-    const { userId, chatId } = req.body;
-    const existing = await Chat.findOne({ where: { id: chatId } });
-    if (existing.users.includes(userId)) {
-      // Cập nhật dữ liệu để loại bỏ userId khỏi mảng users
-      await sequelize.query(
-        `UPDATE Chats SET users = array_remove(users, ${userId}) WHERE id = ${chatId}`
-      );
+  async removeGroup(req, res) {
+    const { chatId } = req.body;
+    try {
+      const chat = await Chat.findByPk(chatId);
+      if (chat) {
+        await UserChat.destroy({
+          where: { chatId: chat.id },
+        });
+        await Chat.destroy(chat);
 
-      // Sau đó, truy vấn để lấy dữ liệu đã được cập nhật
-      const updatedChat = await Chat.findByPk(chatId, {
-        include: [
-          {
-            model: User,
-            as: "groupAdmin",
-            attributes: { exclude: ["password"] },
-          },
-          {
-            model: User,
-            as: "users",
-            attributes: { exclude: ["password"] },
-          },
-        ],
-      });
-
-      if (updatedChat) {
-        res.status(200).send(updatedChat);
-      } else {
-        res.status(404).send("Chat not found");
+        res.status(200).json({ message: "Xóa phòng chat thành công" });
       }
-    } else {
-      res.status(409).send("user doesnt exists");
+      res.status(400).json({ message: "Phòng chat không tồn tại" });
+    } catch (e) {
+      res.status(400).json({ message: "Có lỗi xảy ra khi xóa phòng chat" });
     }
   }
-  async removeContact(req, res) {}
+  async removeMemberInGroup(req, res) {
+    const { userId, chatId } = req.body;
+    try {
+      let removeMember = await UserChat.destroy({
+        where: { chatId: chatId, userId: userId },
+      });
+      if (removeMember > 0) {
+        res
+          .status(200)
+          .json({ message: "Xóa người dùng khỏi nhóm chat thành công!" });
+      }
+      res
+        .status(400)
+        .json({ message: "Xóa người dùng khỏi nhóm chat không thành công!" });
+    } catch (e) {
+      res.status(500).json({ message: "Có lỗi xảy ra khi xóa người dùng!" });
+    }
+  }
+  async removeGroupWhenNoMessage(req, res) {
+    const { chatId } = req.body;
+    try {
+      const message = await Message.findOne({ where: { chatId: chatId } });
+      if ((message.length = 0)) {
+        await Chat.destroy({ where: { chatId: chatId } });
+      }
+      res.status(200);
+    } catch (e) {
+      res.status(500).json("Có lỗi xảy ra!");
+    }
+  }
+
+  // api admin
+  async getAllChatAdmin(req, res) {
+    try {
+      const chat = await Chat.findAll();
+      res.status(200).json(chat);
+    } catch (e) {
+      res.status(500).json({ message: "Đã có lỗi xảy ra" });
+    }
+  }
+
+  async getDetailChatAdmin(req, res) {
+    const { chatId } = req.params;
+    console.log(chatId);
+    try {
+      let chat = await Chat.findByPk(chatId);
+      let lstUser = [];
+
+      let userChat = await UserChat.findAll({
+        where: {
+          chatId: chat.id,
+        },
+      });
+
+      if (userChat == null) {
+        res.status(200).send("Not found user chat!");
+      }
+
+      for (let i = 0; i < userChat.length; i++) {
+        let user = await User.findByPk(userChat[i].userId, {
+          attributes: { exclude: ["password"] }, // Loại bỏ cột password khỏi kết quả trả về
+        });
+        lstUser.push(user);
+      }
+      let messages = await Message.findAll();
+      res.status(200).json({ chat: chat, users: lstUser, messages: messages });
+    } catch (e) {
+      res.status(500).json(e);
+    }
+  }
 }
 
 module.exports = ChatController;
