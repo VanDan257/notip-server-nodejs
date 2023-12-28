@@ -423,7 +423,7 @@ class ChatController {
         });
         lstUser.push(user);
       }
-      let messages = await Message.findAll();
+      let messages = await Message.findAll({ where: { chatId: chat.id } });
       res.status(200).json({ chat: chat, users: lstUser, messages: messages });
     } catch (e) {
       res.status(500).json(e);

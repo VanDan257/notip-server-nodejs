@@ -4,6 +4,7 @@ const Op = require("sequelize").Op;
 const Friend = require("../models/Friend");
 const UserRole = require("../models/UserRole.js");
 const LoginUserHistory = require("../models/LoginUserHistory.js");
+const sequelize = require("../mySQL/dbconnect.js");
 
 class UserController {
   async register(req, res) {
@@ -233,6 +234,19 @@ class UserController {
       res.json({ message: "success" });
     } catch (error) {
       res.status(500).send(error);
+    }
+  }
+
+  async getAllClient(req, res) {
+    try {
+      const clients = await sequelize.query(
+        "SELECT * FROM `users` as u INNER JOIN userroles as ur ON u.id = ur.userId WHERE ur.roleId = 1",
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      console.log("clients: ", clients);
+      res.status(200).json(clients);
+    } catch (error) {
+      res.status(500).json(error);
     }
   }
 
