@@ -27,6 +27,12 @@ const Chat = sequelize.define(
         key: "id",
       },
     },
+    numberOfMessage: {
+      type: DataTypes.INTEGER,
+    },
+    numberOfMember: {
+      type: DataTypes.INTEGER,
+    },
   },
   {
     timestamps: true,

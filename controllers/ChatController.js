@@ -9,7 +9,6 @@ const Friend = require("../models/Friend");
 class ChatController {
   async accessChatUser(req, res) {
     const { userId } = req.body;
-    console.log(userId + "---" + req.rootUserId);
     try {
       let chatId = await sequelize.query(
         `
@@ -35,7 +34,6 @@ class ChatController {
       if (chatId.length > 0) {
         chat = await Chat.findByPk(chatId[0].chatId);
       } else {
-        console.log("chạy vào đây");
         chat = await Chat.create({
           typeChatId: 1,
         });
@@ -238,6 +236,7 @@ class ChatController {
       let chat = await Chat.create({
         chatName: chatName,
         typeChatId: 2,
+        numberOfMember: users.length + 1,
       });
 
       await UserChat.create({
@@ -312,11 +311,19 @@ class ChatController {
 
   async addToGroup(req, res) {
     const { userId, chatId } = req.body;
+    console.log(userId, chatId);
     // Cập nhật dữ liệu
-    const userChat = await UserChat.create({
+    let userChat = await UserChat.create({
       userId: userId,
       chatId: chatId,
     });
+
+    let chat = await Chat.findByPk(chatId);
+
+    await Chat.update(
+      { numberOfMember: chat.numberOfMember + 1 },
+      { where: { id: chatId } }
+    );
 
     if (!userChat) res.status(404);
     res.status(200).send(userChat);
@@ -376,6 +383,17 @@ class ChatController {
   async getAllChatAdmin(req, res) {
     try {
       const chat = await Chat.findAll();
+      for (let i = 0; i < chat.length; i++) {
+        if (chat[i].typeChatId === 1) {
+          let user = await sequelize.query(
+            `SELECT u.* FROM users as u INNER JOIN userchats as uc on u.id = uc.userId WHERE uc.chatId = ${chat[i].id}`,
+            { type: sequelize.QueryTypes.SELECT }
+          );
+          chat[i].chatName = `${user[0].name} - ${user[1].name}`;
+          chat[i].photo = `${user[0].avatar}`;
+        }
+      }
+
       res.status(200).json(chat);
     } catch (e) {
       res.status(500).json({ message: "Đã có lỗi xảy ra" });

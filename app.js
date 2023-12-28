@@ -75,7 +75,6 @@ chatNamespace.on("connection", (socket) => {
   // socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
   socket.on("new-message", async (payload) => {
-    console.log("chatName: ", payload.chatName);
     socket.to(payload.chatName).emit("message-received", payload);
   });
 

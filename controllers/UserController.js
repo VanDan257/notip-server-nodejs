@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const Op = require("sequelize").Op;
 const Friend = require("../models/Friend");
 const UserRole = require("../models/UserRole.js");
+const LoginUserHistory = require("../models/LoginUserHistory.js");
 
 class UserController {
   async register(req, res) {
@@ -41,6 +42,7 @@ class UserController {
       if (!validPassword) {
         res.status(200).json({ message: "Invalid Password" });
       } else {
+        await LoginUserHistory.create({ userId: valid.id });
         const token = await valid.generateAuthToken();
         await valid.save();
         res.cookie("userToken", token, {

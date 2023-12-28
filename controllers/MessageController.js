@@ -1,8 +1,6 @@
 const Message = require("../models/Message");
 const Chat = require("../models/Chat");
-const User = require("../models/User");
 const sequelize = require("../mySQL/dbconnect");
-const { where } = require("sequelize");
 
 class MessageController {
   async sendMessage(req, res) {
@@ -38,12 +36,16 @@ class MessageController {
       msg.dataValues.senderName = req.rootUser.name;
 
       if (type == "media") msg.content = "Hình ảnh";
-      // await sequelize.query(
-      //   `update chats set lastestMessage = '${msg.content}' where id = ${chatId}`
-      // );
+
+      let chat = await Chat.findByPk(chatId);
+      let numberOfMessages = chat.numberOfMessage + 1;
+      console.log(numberOfMessages);
 
       await Chat.update(
-        { lastestMessage: msg.content },
+        {
+          lastestMessage: msg.content,
+          numberOfMessage: numberOfMessages,
+        },
         { where: { id: chatId } },
         { individualHooks: true }
       );
@@ -66,6 +68,17 @@ class MessageController {
     } catch (error) {
       res.status(500).json({ error: error });
       console.log(error);
+    }
+  }
+
+  // api admin
+  async getAllMessagesAdmin(req, res) {
+    try{
+      const messages = await Message.findAll();
+      res.status(200).json(messages)
+    }
+    catch(e) {
+      res.staus(500).json({message: "Có lỗi xảy ra!"})
     }
   }
 }

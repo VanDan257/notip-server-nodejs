@@ -2,8 +2,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sequelize = require("../mySQL/dbconnect");
 const { DataTypes } = require("sequelize");
-const Friend = require("./Friend");
-const Message = require("./Message");
 
 const User = sequelize.define(
   "Users",
@@ -48,10 +46,6 @@ const User = sequelize.define(
     },
     lastLogin: {
       type: DataTypes.DATE,
-      allowNull: true,
-    },
-    currentSession: {
-      type: DataTypes.STRING,
       allowNull: true,
     },
   },
