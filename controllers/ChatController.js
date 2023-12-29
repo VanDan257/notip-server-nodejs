@@ -402,9 +402,9 @@ class ChatController {
 
   async getDetailChatAdmin(req, res) {
     const { chatId } = req.params;
-    console.log(chatId);
     try {
       let chat = await Chat.findByPk(chatId);
+
       let lstUser = [];
 
       let userChat = await UserChat.findAll({
@@ -423,7 +423,17 @@ class ChatController {
         });
         lstUser.push(user);
       }
-      let messages = await Message.findAll({ where: { chatId: chat.id } });
+
+      if (chat.typeChatId === 1) {
+        chat.chatName = `${lstUser[0].name} - ${lstUser[1].name}`;
+        // chat.photo = `${lstUser[0].avatar}`;
+      }
+
+      let messages = await sequelize.query(
+        `SELECT m.*, u.name as senderName FROM messages as m INNER JOIN users as u ON m.senderId = u.id 
+        INNER JOIN chats as c ON m.chatId = c.id WHERE c.id = ${chatId}`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
       res.status(200).json({ chat: chat, users: lstUser, messages: messages });
     } catch (e) {
       res.status(500).json(e);

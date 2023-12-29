@@ -9,7 +9,6 @@ const sequelize = require("../mySQL/dbconnect.js");
 class UserController {
   async register(req, res) {
     const { username, phone, email, password } = req.body;
-    console.log(req.body);
     try {
       const existingUser = await User.findOne({ where: { email: email } });
 
@@ -174,6 +173,7 @@ class UserController {
     }
   }
 
+  // api admin
   async loginAdmin(req, res) {
     const { email, password } = req.body;
     try {

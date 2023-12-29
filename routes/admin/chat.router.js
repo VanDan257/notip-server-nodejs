@@ -1,10 +1,5 @@
 const express = require("express");
-const {
-  Auth,
-  checkUserRole,
-  checkAdminRole,
-  checkModeratorRole,
-} = require("../../middleware/userAuth");
+const { Auth, checkAdminRole } = require("../../middleware/userAuth");
 const router = express.Router();
 const ChatController = require("../../controllers/ChatController");
 const MessageController = require("../../controllers/MessageController");
