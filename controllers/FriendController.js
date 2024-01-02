@@ -55,7 +55,13 @@ class FriendController {
   async getListFriends(req, res) {
     try {
       let listFriendsId = await Friend.findAll({
-        where: { senderId: req.rootUserId, friendStatusId: 2 },
+        where: {
+          [Op.or]: [
+            { senderId: req.rootUserId },
+            { recipientId: req.rootUserId },
+          ],
+          [Op.and]: [{ friendStatusId: 2 }],
+        },
       });
 
       let listFriends = [];
@@ -65,7 +71,7 @@ class FriendController {
           if (user) listFriends.push(user);
         }
       } else {
-        res.status(300).send("You haven't any friend yet;");
+        res.status(300).json({ message: "You haven't any friend yet;" });
       }
       res.status(200).json(listFriends);
     } catch (e) {

@@ -10,7 +10,7 @@ const UserController = require("../../controllers/UserController");
 
 const user = new UserController();
 
-router.post("/login-admin", async (req, res) => {
+router.post("/login-admin", Auth, checkAdminRole, async (req, res) => {
   await user.loginAdmin(req, res);
 });
 
