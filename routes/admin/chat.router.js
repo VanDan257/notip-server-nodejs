@@ -16,4 +16,8 @@ router.get("/get-all-message", Auth, checkAdminRole, (req, res) => {
   message.getAllMessagesAdmin(req, res);
 });
 
+router.post("/remove-user-in-group", Auth, checkAdminRole, async (req, res) => {
+  await chat.removeMemberInGroup(req, res);
+});
+
 module.exports = router;

@@ -19,6 +19,7 @@ class UserController {
         password: password,
         name: username,
         phone: phone,
+        status: 1,
       });
       const token = await newuser.generateAuthToken();
       await newuser.save();
@@ -173,6 +174,16 @@ class UserController {
     }
   }
 
+  async deleteUser(req, res) {
+    const { userId } = req.body;
+    console.log(req.body);
+    if ((await User.destroy(userId)) > 0) {
+      res.status(200);
+    } else {
+      res.status(500).json({ message: "Đã có lỗi xảy ra!" });
+    }
+  }
+
   // api admin
   async loginAdmin(req, res) {
     const { email, password } = req.body;
@@ -214,26 +225,56 @@ class UserController {
   }
 
   async createAccountAdmin(req, res) {
-    const { username, phone, email, password } = req.body;
+    const { name, gender, email, phone, address, password, dob } = req.body;
     try {
       const existingUser = await User.findOne({ where: { email: email } });
-
       if (existingUser)
         return res.status(400).json({ message: "Email đã tồn tại" });
-      const newuser = new User({
+      const newUser = new User({
         email: email,
         password: password,
-        name: username,
+        name: name,
+        address: address,
+        gender: gender,
+        dob: dob,
         phone: phone,
+        status: 1,
       });
-      await newuser.save();
+
+      // const newuser = new User({
+      //   email: email,
+      //   password: password,
+      //   name: name,
+      //   phone: phone,
+      //   status: 1,
+      // });
+
+      let file;
+      let uploadPath;
+      if (req.files.file || Object.keys(req.files.file).length > 0) {
+        // The name of the input field (i.e. "file") is used to retrieve the uploaded file
+        file = req.files.file;
+
+        uploadPath =
+          "E:\\Do_An_5\\notip-client\\src\\assets\\images\\avatar-user\\" +
+          file.name;
+
+        // Use the mv() method to place the file somewhere on your server
+        file.mv(uploadPath, function (err) {
+          if (err) return res.status(500).send(err);
+        });
+
+        newUser.avatar = "avatar-user/" + file.name;
+      }
+
+      await newUser.save();
       await UserRole.create({
-        userId: newuser.id,
+        userId: newUser.id,
         roleId: 2,
       });
-      res.json({ message: "success" });
+      res.json(newUser);
     } catch (error) {
-      res.status(500).send(error);
+      res.status(500).json(error);
     }
   }
 
@@ -243,8 +284,19 @@ class UserController {
         "SELECT * FROM `users` as u INNER JOIN userroles as ur ON u.id = ur.userId WHERE ur.roleId = 1",
         { type: sequelize.QueryTypes.SELECT }
       );
-      console.log("clients: ", clients);
       res.status(200).json(clients);
+    } catch (error) {
+      res.status(500).json(error);
+    }
+  }
+
+  async getAllAdmins(req, res) {
+    try {
+      const admins = await sequelize.query(
+        "SELECT * FROM `users` as u INNER JOIN userroles as ur ON u.id = ur.userId WHERE ur.roleId = 2",
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      res.status(200).json(admins);
     } catch (error) {
       res.status(500).json(error);
     }

@@ -35,9 +35,14 @@ router.post("/group/rename", Auth, async (req, res) => {
 router.post("/groupAdd", Auth, checkUserRole, async (req, res) => {
   await chat.addToGroup(req, res);
 });
-router.post("/groupRemove", Auth, checkUserRole, async (req, res) => {
-  await chat.removeFromGroup(req, res);
-});
+router.post(
+  "/remove-member-in-group",
+  Auth,
+  checkUserRole,
+  async (req, res) => {
+    await chat.removeMemberInGroup(req, res);
+  }
+);
 // router.delete('/removeuser', Auth);
 
 module.exports = router;

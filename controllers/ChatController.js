@@ -57,9 +57,9 @@ class ChatController {
   async fetchAllChats(req, res) {
     try {
       let chats = await sequelize.query(
-        "SELECT `Chats`.*  FROM `Chats` AS `Chats` INNER JOIN ( `UserChats` AS `Users->UserChats` INNER JOIN `Users` AS `Users` ON `Users`.`id` = `Users->UserChats`.`userId`) ON `Chats`.`id` = `Users->UserChats`.`chatId` AND `Users`.`id` = " +
+        "SELECT c.* from chats as c INNER JOIN userchats as uc on c.id = uc.chatId WHERE uc.userId = " +
           req.rootUserId +
-          " ORDER BY `Chats`.`updatedAt` DESC;",
+          " ORDER BY `c`.`updatedAt` DESC;",
         { type: sequelize.QueryTypes.SELECT }
       );
 
@@ -71,7 +71,7 @@ class ChatController {
             where: {
               chatId: lstChat[i].id,
               userId: {
-                [Op.ne]: 1, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+                [Op.ne]: req.rootUserId, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
               },
             },
           });
@@ -311,7 +311,6 @@ class ChatController {
 
   async addToGroup(req, res) {
     const { userId, chatId } = req.body;
-    console.log(userId, chatId);
     // Cập nhật dữ liệu
     let userChat = await UserChat.create({
       userId: userId,
@@ -354,14 +353,9 @@ class ChatController {
       let removeMember = await UserChat.destroy({
         where: { chatId: chatId, userId: userId },
       });
-      if (removeMember > 0) {
-        res
-          .status(200)
-          .json({ message: "Xóa người dùng khỏi nhóm chat thành công!" });
-      }
       res
-        .status(400)
-        .json({ message: "Xóa người dùng khỏi nhóm chat không thành công!" });
+        .status(200)
+        .json({ message: "Xóa người dùng khỏi nhóm chat thành công!" });
     } catch (e) {
       res.status(500).json({ message: "Có lỗi xảy ra khi xóa người dùng!" });
     }

@@ -14,12 +14,25 @@ router.post("/login-admin", async (req, res) => {
   await user.loginAdmin(req, res);
 });
 
-router.post("/create-account-admin", async (req, res) => {
-  await user.createAccountAdmin(req, res);
+router.post(
+  "/create-account-admin",
+  Auth,
+  checkModeratorRole,
+  async (req, res) => {
+    await user.createAccountAdmin(req, res);
+  }
+);
+
+router.get("/get-all-client", Auth, checkAdminRole, async (req, res) => {
+  await user.getAllClient(req, res);
 });
 
-router.get("/get-all-client", async (req, res) => {
-  await user.getAllClient(req, res);
+router.get("/get-all-admins", Auth, checkModeratorRole, async (req, res) => {
+  await user.getAllAdmins(req, res);
+});
+
+router.delete("/delete-admin", Auth, checkModeratorRole, async (req, res) => {
+  await user.deleteUser(req, res);
 });
 
 module.exports = router;

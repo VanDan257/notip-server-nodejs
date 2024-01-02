@@ -1,10 +1,12 @@
 const Friend = require("../models/Friend");
 const User = require("../models/User");
 const { Op } = require("sequelize");
+const sequelize = require("../mySQL/dbconnect");
 
 class FriendController {
   async SendInvite(req, res) {
     const { recipientId } = req.body;
+    console.log(recipientId);
     try {
       const friendStatus = await Friend.create({
         senderId: req.rootUserId,
@@ -17,17 +19,21 @@ class FriendController {
     }
   }
   async changeStatusFriend(req, res, friendStatusId) {
-    const { recipientId } = req.body;
+    const { senderId } = req.body;
 
     try {
       await Friend.update(
         { friendStatusId: friendStatusId },
-        { where: { recipientId: recipientId } }
+        {
+          where: {
+            [Op.and]: [{ senderId: senderId }, { recipientId: req.rootUserId }],
+          },
+        }
       );
 
-      res.status(200);
+      res.status(200).json({ message: "Đã thêm vào danh sách bạn bè!" });
     } catch (e) {
-      res.status(500).send(e);
+      res.status(500).json({ message: "Đã có lỗi xảy ra!" });
     }
   }
 
@@ -77,7 +83,7 @@ class FriendController {
       if (listFriendsId) {
         for (let i = 0; i < listFriendsId.length; i++) {
           let user = await User.findByPk(listFriendsId[i].senderId);
-          if (user) listFriends.push(user);
+          if (user) listFriends.push({ ...user.dataValues, statusFriend: 2 });
         }
       } else {
         res.status(300).send("You haven't any friend yet;");
@@ -115,9 +121,13 @@ class FriendController {
     }
   }
 
-  async searchUserInFriendPage(req, res) {
+  async searchUserInInvitedPage(req, res) {
     const { keySearch } = req.params;
     try {
+      console.log(keySearch);
+      let listUserSearch = [];
+      let locIdUsers = [];
+
       const users = await User.findAll({
         where: {
           [Op.or]: [
@@ -128,21 +138,36 @@ class FriendController {
           [Op.and]: [{ id: { [Op.not]: req.rootUserId } }],
         },
       });
-      if (users != null) {
-        for (const user of users) {
-          const currentUserInvitedFriend = await Friend.findAll({
-            where: {
-              [Op.or]: [{ senderId: req.rootUserId }, { senderId: user.id }],
-            },
-          });
-          const userInvitedFriend = await Friend.findAll({
-            where: [{ recipientId: req.rootUserId }, { senderId: user.id }],
-          });
-          console.log("currentUserInvitedFriend: ", currentUserInvitedFriend);
-          console.log("userInvitedFriend: ", userInvitedFriend);
+
+      for (const user of users) {
+        // người dùng hiện tại là người gửi lmkb (statusFriend: 1)
+        const currentUserIsSender = await Friend.findOne({
+          where: {
+            [Op.and]: [{ senderId: req.rootUserId }, { recipientId: user.id }],
+          },
+        });
+        if (currentUserIsSender != null) {
+          listUserSearch.push({ ...user.dataValues, statusFriend: 1 });
+          locIdUsers.push(currentUserIsSender.recipientId);
+        }
+
+        // người dùng hiện tại là người được gửi lmkb (statusFriend: 2)
+        const currentUserIsRecipient = await Friend.findOne({
+          where: {
+            [Op.and]: [{ senderId: user.id }, { recipientId: req.rootUserId }],
+          },
+        });
+        if (currentUserIsRecipient != null) {
+          listUserSearch.push({ ...user.dataValues, statusFriend: 2 });
+          locIdUsers.push(currentUserIsSender.recipientId);
         }
       }
-      res.status(200).send(users);
+
+      let filterUsers = users.filter((item) => !locIdUsers.includes(item.id));
+
+      listUserSearch.push(...filterUsers);
+
+      res.status(200).json(listUserSearch);
     } catch (e) {
       res.status(500).send({ message: "Đã có lỗi xảy ra!" });
     }

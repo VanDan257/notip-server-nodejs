@@ -38,4 +38,12 @@ router.get("/search-friend/:name", Auth, async (req, res) => {
   await friend.searchFriend(req, res);
 });
 
+router.get(
+  "/search-friend-in-invited-page/:keySearch",
+  Auth,
+  async (req, res) => {
+    await friend.searchUserInInvitedPage(req, res);
+  }
+);
+
 module.exports = router;

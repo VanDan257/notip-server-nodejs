@@ -52,7 +52,7 @@ const checkAdminRole = async (req, res, next) => {
   if (role.roleId === 2 || role.roleId === 3) {
     next();
   } else {
-    res.status(500).json({ message: "Bạn không có quyền truy cập trang này" });
+    res.status(401).json({ message: "Bạn không có quyền truy cập trang này" });
   }
 };
 
@@ -64,7 +64,7 @@ const checkModeratorRole = async (req, res, next) => {
   if (role.roleId === 3) {
     next();
   } else {
-    res.status(500).json({ message: "Bạn không có quyền truy cập trang này" });
+    res.status(401).json({ message: "Bạn không có quyền truy cập trang này" });
   }
 };
 
