@@ -135,15 +135,6 @@ class ChatController {
         }
       }
 
-      // search all chat friend
-
-      // let listFriendId = await Friend.findAll({
-      //   where: { senderId: req.rootUserId },
-      // });
-      // // let listFriends = [];
-      // if (listFriendId != null) {
-      //   for (let i = 0; i < listFriendId.length; i++) {
-
       // Lấy các user có name, email, phone có chứa key search, convert thành chatroom
       let user = await User.findAll({
         where: {

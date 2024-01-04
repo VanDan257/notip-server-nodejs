@@ -5,6 +5,7 @@ const Friend = require("../models/Friend");
 const UserRole = require("../models/UserRole.js");
 const LoginUserHistory = require("../models/LoginUserHistory.js");
 const sequelize = require("../mySQL/dbconnect.js");
+const cloudinary = require("../utils/cloudinary.js");
 
 class UserController {
   async register(req, res) {
@@ -151,22 +152,29 @@ class UserController {
 
       // The name of the input field (i.e. "file") is used to retrieve the uploaded file
       file = req.files.file;
+      let fileName = file.name.split(".");
 
-      uploadPath =
-        "E:\\Do_An_5\\notip-client\\src\\assets\\images\\avatar-user\\" +
-        file.name;
+      // Upload file lên Cloudinary từ buffer của file
+      const folderName = "avatar-user"; // Thay đổi thành tên thư mục bạn muốn
+      // Upload file vào thư mục chỉ định trên Cloudinary từ buffer của file
+      cloudinary.uploader
+        .upload_stream(
+          { resource_type: "auto", folder: folderName, public_id: fileName[0] }, // Sử dụng tùy chọn folder
+          (error, result) => {
+            if (error) {
+              console.error(error);
+              return res.status(500).json({ error: "Upload failed" });
+            }
+          }
+        )
+        .end(file.data);
 
-      // Use the mv() method to place the file somewhere on your server
-      file.mv(uploadPath, function (err) {
-        if (err) return res.status(500).send(err);
-      });
-
-      let user = await User.update(
+      await User.update(
         { avatar: "avatar-user/" + file.name },
         { where: { id: req.rootUserId } }
       );
 
-      console.log("user: ", user);
+      // console.log("user: ", user);
 
       res.status(200).json(await User.findByPk(req.rootUserId));
     } catch (e) {

@@ -69,17 +69,14 @@ let userRoomChats = [];
 chatNamespace.on("connection", (socket) => {
   socket.on("setup", (name) => {
     socket.join(name);
-    console.log("name: ", name);
   });
 
   socket.on("join-room", (room) => {
     userRoomChats.push(socket.id);
     socket.join(room);
-    console.log("room: ", room);
   });
 
   socket.on("new-message", async (payload) => {
-    console.log("room new message: ", payload.chatName);
     socket.to(payload.chatName).emit("message-received", payload);
   });
 
