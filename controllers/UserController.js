@@ -5,7 +5,7 @@ const Friend = require("../models/Friend");
 const UserRole = require("../models/UserRole.js");
 const LoginUserHistory = require("../models/LoginUserHistory.js");
 const sequelize = require("../mySQL/dbconnect.js");
-const cloudinary = require("../utils/cloudinary.js");
+const uploadToCloudinary = require("../utils/cloudinary.js");
 
 class UserController {
   async register(req, res) {
@@ -145,29 +145,16 @@ class UserController {
   async updateAvatar(req, res) {
     try {
       let file;
-      let uploadPath;
       if (!req.files || Object.keys(req.files).length === 0) {
         return res.status(400).send("No files were uploaded.");
       }
 
       // The name of the input field (i.e. "file") is used to retrieve the uploaded file
       file = req.files.file;
-      let fileName = file.name.split(".");
 
-      // Upload file lên Cloudinary từ buffer của file
-      const folderName = "avatar-user"; // Thay đổi thành tên thư mục bạn muốn
-      // Upload file vào thư mục chỉ định trên Cloudinary từ buffer của file
-      cloudinary.uploader
-        .upload_stream(
-          { resource_type: "auto", folder: folderName, public_id: fileName[0] }, // Sử dụng tùy chọn folder
-          (error, result) => {
-            if (error) {
-              console.error(error);
-              return res.status(500).json({ error: "Upload failed" });
-            }
-          }
-        )
-        .end(file.data);
+      const result = await uploadToCloudinary(file.data, {
+        folder: "avatar-user//",
+      });
 
       await User.update(
         { avatar: "avatar-user/" + file.name },
@@ -233,7 +220,8 @@ class UserController {
   }
 
   async createAccountAdmin(req, res) {
-    const { name, gender, email, phone, address, password, dob } = req.body;
+    const { name, gender, email, phone, address, password, dob, role } =
+      req.body;
     try {
       const existingUser = await User.findOne({ where: { email: email } });
       if (existingUser)
@@ -249,36 +237,25 @@ class UserController {
         status: 1,
       });
 
-      // const newuser = new User({
-      //   email: email,
-      //   password: password,
-      //   name: name,
-      //   phone: phone,
-      //   status: 1,
-      // });
-
       let file;
-      let uploadPath;
-      if (req.files.file || Object.keys(req.files.file).length > 0) {
+      if (req.files) {
         // The name of the input field (i.e. "file") is used to retrieve the uploaded file
         file = req.files.file;
+        let fileName = file.name.split(".");
 
-        uploadPath =
-          "E:\\Do_An_5\\notip-client\\src\\assets\\images\\avatar-user\\" +
-          file.name;
-
-        // Use the mv() method to place the file somewhere on your server
-        file.mv(uploadPath, function (err) {
-          if (err) return res.status(500).send(err);
+        const result = await uploadToCloudinary(file.data, {
+          resource_type: "auto",
+          folder: "admin-avatar/",
+          public_id: fileName[0],
         });
 
-        newUser.avatar = "avatar-user/" + file.name;
+        newUser.avatar = "admin-avatar/" + file.name;
       }
 
       await newUser.save();
       await UserRole.create({
         userId: newUser.id,
-        roleId: 2,
+        roleId: role,
       });
       res.json(newUser);
     } catch (error) {
@@ -289,7 +266,7 @@ class UserController {
   async getAllClient(req, res) {
     try {
       const clients = await sequelize.query(
-        "SELECT * FROM `users` as u INNER JOIN userroles as ur ON u.id = ur.userId WHERE ur.roleId = 1",
+        "SELECT * FROM `users` order by id desc",
         { type: sequelize.QueryTypes.SELECT }
       );
       res.status(200).json(clients);

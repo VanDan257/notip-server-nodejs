@@ -67,6 +67,8 @@ const chatNamespace = io.of("/chat");
 let userRoomChats = [];
 
 chatNamespace.on("connection", (socket) => {
+  console.log("connected socket 1");
+
   socket.on("setup", (name) => {
     socket.join(name);
   });
@@ -83,5 +85,27 @@ chatNamespace.on("connection", (socket) => {
   socket.on("leave-room", () => {
     socket.leave("roomChat");
     userRoomChats = userRoomChats.filter((id) => id !== socket.id);
+  });
+});
+
+const callNameSpace = io.of("/call");
+callNameSpace.on("connection", (socket) => {
+  console.log("connected socket 2");
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+
+  // Xử lý truyền tin hiệu WebRTC giữa các client
+  socket.on("offer", (data) => {
+    socket.broadcast.emit("offer", data); // Gửi offer tới các client khác
+  });
+
+  socket.on("answer", (data) => {
+    socket.broadcast.emit("answer", data); // Gửi answer tới các client khác
+  });
+
+  socket.on("ice-candidate", (data) => {
+    socket.broadcast.emit("ice-candidate", data); // Gửi ICE candidates tới các client khác
   });
 });

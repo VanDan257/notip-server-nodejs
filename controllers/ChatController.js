@@ -5,6 +5,7 @@ const Message = require("../models/Message");
 const { Op } = require("sequelize");
 const sequelize = require("../mySQL/dbconnect");
 const Friend = require("../models/Friend");
+const uploadToCloudinary = require("../utils/cloudinary.js");
 
 class ChatController {
   async accessChatUser(req, res) {
@@ -269,7 +270,6 @@ class ChatController {
     try {
       const { chatId } = req.body;
       let file;
-      let uploadPath;
       if (!req.files || Object.keys(req.files).length === 0) {
         return res.status(400).send("No files were uploaded.");
       }
@@ -277,18 +277,16 @@ class ChatController {
       // The name of the input field (i.e. "file") is used to retrieve the uploaded file
       file = req.files.file;
 
-      uploadPath =
-        "E:\\Do_An_5\\notip-client\\src\\assets\\images\\photo-chat\\" +
-        file.name;
+      let fileName = file.name.split(".");
 
-      // Use the mv() method to place the file somewhere on your server
-      file.mv(uploadPath, function (err) {
-        if (err) return res.status(500).send(err);
+      // Upload file vào thư mục chỉ định trên Cloudinary từ buffer của file
+      const result = await uploadToCloudinary(file.data, {
+        folder: "photo-chat/" + fileName[0],
       });
 
       let chat = await Chat.update(
         {
-          photo: "photo-chat\\" + file.name,
+          photo: "photo-chat/" + file.name,
         },
         {
           where: { id: chatId },

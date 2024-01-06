@@ -1,7 +1,7 @@
 const Message = require("../models/Message");
 const Chat = require("../models/Chat");
 const sequelize = require("../mySQL/dbconnect");
-const cloudinary = require("../utils/cloudinary.js");
+const uploadToCloudinary = require("../utils/cloudinary.js");
 
 class MessageController {
   async sendMessage(req, res) {
@@ -9,43 +9,32 @@ class MessageController {
 
     try {
       let file;
-      let url;
       let fileName;
+      let chat = await Chat.findByPk(chatId);
+
       if (req.files) {
         // The name of the input field (i.e. "file") is used to retrieve the uploaded file
         file = req.files.file;
         fileName = file.name.split(".");
-        // fileName[0] = this.replaceSpecialVietnameseCharacters(fileName[0]);
-        const folderName = "attachment"; // Thay đổi thành tên thư mục bạn muốn
-        // Upload file vào thư mục chỉ định trên Cloudinary từ buffer của file
-        cloudinary.uploader
-          .upload_stream(
-            {
-              resource_type: "auto",
-              folder: folderName,
-              public_id: fileName[0],
-            }, // Sử dụng tùy chọn folder
-            (error, result) => {
-              if (error) {
-                console.error(error);
-                return res.status(500).json({ error: "Upload failed" });
-              } else {
-                url = result.secure_url;
-                console.log(result.secure_url);
-              }
-            }
-          )
-          .end(file.data);
-      }
 
-      console.log(url);
+        const result = await uploadToCloudinary(file.data, {
+          resource_type: "auto",
+          folder: "attachment/" + chat.chatName,
+          public_id: fileName[0],
+        });
+      }
 
       let msg = await Message.create({
         senderId: req.rootUserId,
         content: content,
         path:
           req.files != null
-            ? "attachment\\" + fileName[0] + "." + fileName[1]
+            ? "attachment/" +
+              chat.chatName +
+              "/" +
+              fileName[0] +
+              "." +
+              fileName[1]
             : null,
         type: type,
         chatId: chatId,
@@ -56,7 +45,6 @@ class MessageController {
 
       if (type == "media") msg.content = "Hình ảnh";
 
-      let chat = await Chat.findByPk(chatId);
       let numberOfMessages = chat.numberOfMessage + 1;
 
       await Chat.update(

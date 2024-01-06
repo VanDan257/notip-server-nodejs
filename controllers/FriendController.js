@@ -64,11 +64,20 @@ class FriendController {
         },
       });
 
+      console.log(listFriendsId);
+
       let listFriends = [];
       if (listFriendsId) {
         for (let i = 0; i < listFriendsId.length; i++) {
-          let user = await User.findByPk(listFriendsId[i].recipientId);
-          if (user) listFriends.push(user);
+          if (listFriendsId[i].recipientId != req.rootUserId) {
+            let user = await User.findByPk(listFriendsId[i].recipientId);
+            if (user) listFriends.push(user);
+          }
+
+          if (listFriendsId[i].senderId != req.rootUserId) {
+            let user = await User.findByPk(listFriendsId[i].senderId);
+            if (user) listFriends.push(user);
+          }
         }
       } else {
         res.status(300).json({ message: "You haven't any friend yet;" });
