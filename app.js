@@ -64,17 +64,25 @@ server.listen(process.env.PORT, () => {
 });
 
 const chatNamespace = io.of("/chat");
-let userRoomChats = [];
+let userRoomChats = {};
 
 chatNamespace.on("connection", (socket) => {
-  console.log("connected socket 1");
-
+  // chat
   socket.on("setup", (name) => {
+    // nếu userRoomChats chưa có thuộc tính tên là room thì khai báo thuộc tính đó là 1 mảng rỗng
+    if (!userRoomChats.hasOwnProperty(name)) {
+      userRoomChats[name] = [];
+    }
+    userRoomChats[name].push(socket.id);
     socket.join(name);
   });
 
   socket.on("join-room", (room) => {
-    userRoomChats.push(socket.id);
+    // nếu userRoomChats chưa có thuộc tính tên là room thì khai báo thuộc tính đó là 1 mảng rỗng
+    if (!userRoomChats.hasOwnProperty(room)) {
+      userRoomChats[room] = [];
+    }
+    userRoomChats[room].push(socket.id);
     socket.join(room);
   });
 
@@ -84,28 +92,46 @@ chatNamespace.on("connection", (socket) => {
 
   socket.on("leave-room", () => {
     socket.leave("roomChat");
-    userRoomChats = userRoomChats.filter((id) => id !== socket.id);
-  });
-});
-
-const callNameSpace = io.of("/call");
-callNameSpace.on("connection", (socket) => {
-  console.log("connected socket 2");
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
+    Object.keys(userRoomChats).forEach((userId) => {
+      if (userRoomChats[userId] === socket.id) {
+        delete userRoomChats[userId];
+      }
+    });
   });
 
-  // Xử lý truyền tin hiệu WebRTC giữa các client
+  // call
+  // Nhận và chuyển tiếp offer từ người gọi đến phòng chat (những người đang kết nối tới phòng chat đó)
   socket.on("offer", (data) => {
-    socket.broadcast.emit("offer", data); // Gửi offer tới các client khác
+    console.log(data);
+    const receiverSocketId = userRoomChats[data.room];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("offer", {
+        senderName: data.senderName,
+        offer: data.offer,
+      });
+    }
   });
 
+  // Nhận và chuyển tiếp answer từ người nhận đến người gọi
   socket.on("answer", (data) => {
-    socket.broadcast.emit("answer", data); // Gửi answer tới các client khác
+    console.log(data);
+    const senderSocketId = userRoomChats[data.senderId];
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("answer", {
+        room: data.room,
+        answer: data.answer,
+      });
+    }
   });
 
+  // Nhận và chuyển tiếp ICE candidate từ người gọi đến người nhận hoặc ngược lại
   socket.on("ice-candidate", (data) => {
-    socket.broadcast.emit("ice-candidate", data); // Gửi ICE candidates tới các client khác
+    console.log(data);
+    const targetSocketId = connectedUsers[data.targetId];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("ice-candidate", {
+        candidate: data.candidate,
+      });
+    }
   });
 });

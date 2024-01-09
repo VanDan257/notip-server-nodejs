@@ -18,11 +18,11 @@ class ChatController {
           WHERE chatId IN (
             SELECT chatId
             FROM userchats
-            WHERE userId IN (` +
+            WHERE userId IN ('` +
           userId +
-          `, ` +
+          `', '` +
           req.rootUserId +
-          `)
+          `')
             GROUP BY chatId
             HAVING COUNT(DISTINCT userId) = 2
           )
@@ -51,6 +51,7 @@ class ChatController {
       }
       res.status(200).json(chat);
     } catch (e) {
+      console.log(e);
       res.status(500).json(e);
     }
   }
@@ -58,9 +59,9 @@ class ChatController {
   async fetchAllChats(req, res) {
     try {
       let chats = await sequelize.query(
-        "SELECT c.* from chats as c INNER JOIN userchats as uc on c.id = uc.chatId WHERE uc.userId = " +
+        "SELECT c.* from chats as c INNER JOIN userchats as uc on c.id = uc.chatId WHERE uc.userId = '" +
           req.rootUserId +
-          " ORDER BY `c`.`updatedAt` DESC;",
+          "' ORDER BY `c`.`updatedAt` DESC;",
         { type: sequelize.QueryTypes.SELECT }
       );
 
@@ -72,7 +73,7 @@ class ChatController {
             where: {
               chatId: lstChat[i].id,
               userId: {
-                [Op.ne]: req.rootUserId, // req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
+                [Op.ne]: req.rootUserId, // Sử dụng Op.ne để loại trừ userId = 1
               },
             },
           });
@@ -93,7 +94,6 @@ class ChatController {
       res.status(200).json(lstChat);
     } catch (error) {
       res.status(500).send(error);
-      console.log(error);
     }
   }
 
@@ -102,9 +102,9 @@ class ChatController {
     try {
       // search all chat groups
       let chats = await sequelize.query(
-        "SELECT `Chats`.*  FROM `Chats` AS `Chats` INNER JOIN ( `UserChats` AS `Users->UserChats` INNER JOIN `Users` AS `Users` ON `Users`.`id` = `Users->UserChats`.`userId`) ON `Chats`.`id` = `Users->UserChats`.`chatId` AND `Users`.`id` = " +
+        "SELECT `Chats`.*  FROM `Chats` AS `Chats` INNER JOIN ( `UserChats` AS `Users->UserChats` INNER JOIN `Users` AS `Users` ON `Users`.`id` = `Users->UserChats`.`userId`) ON `Chats`.`id` = `Users->UserChats`.`chatId` AND `Users`.`id` = '" +
           req.rootUserId +
-          " WHERE Chats.chatName LIKE '%" +
+          "' WHERE Chats.chatName LIKE '%" +
           keySearch +
           "%'" +
           " ORDER BY `Chats`.`updatedAt` DESC;",
@@ -144,7 +144,6 @@ class ChatController {
             { email: { [Op.like]: `%${keySearch}%` } },
             { phone: { [Op.like]: `%${keySearch}%` } },
           ],
-          // id: listFriendId[i].recipientId,
         },
       });
 
@@ -158,13 +157,9 @@ class ChatController {
         }
       }
 
-      //   }
-      // }
-
       res.status(200).json(lstChat);
     } catch (error) {
       res.status(500).send(error);
-      console.log(error);
     }
   }
 
@@ -178,7 +173,7 @@ class ChatController {
           where: {
             chatId: chat.id,
             userId: {
-              [Op.ne]: req.rootUserId, // Sử dụng Op.ne để loại trừ userId = req.rootUserId
+              [Op.ne]: req.rootUserId, // Sử dụng Op.ne để loại trừ userId
             },
           },
         });
@@ -255,14 +250,13 @@ class ChatController {
       const chat = await Chat.findByPk(chatId);
 
       await sequelize.query(
-        `UPDATE Chats SET chatName = '${chatName}' where id = ${chatId}`
+        `UPDATE Chats SET chatName = '${chatName}' where id = '${chatId}'`
       );
 
       if (!chat) res.status(404);
       res.status(200).send(chat);
     } catch (error) {
       res.status(500).send(error);
-      console.log(error);
     }
   }
 
@@ -369,11 +363,12 @@ class ChatController {
       for (let i = 0; i < chat.length; i++) {
         if (chat[i].typeChatId === 1) {
           let user = await sequelize.query(
-            `SELECT u.* FROM users as u INNER JOIN userchats as uc on u.id = uc.userId WHERE uc.chatId = ${chat[i].id}`,
+            `SELECT u.* FROM users as u INNER JOIN userchats as uc on u.id = uc.userId WHERE uc.chatId = '${chat[i].id}'`,
             { type: sequelize.QueryTypes.SELECT }
           );
           chat[i].chatName = `${user[0].name} - ${user[1].name}`;
           chat[i].photo = `${user[0].avatar}`;
+          chat[i].numberOfMember = 2;
         }
       }
 
@@ -414,11 +409,12 @@ class ChatController {
 
       let messages = await sequelize.query(
         `SELECT m.*, u.name as senderName FROM messages as m INNER JOIN users as u ON m.senderId = u.id 
-        INNER JOIN chats as c ON m.chatId = c.id WHERE c.id = ${chatId}`,
+        INNER JOIN chats as c ON m.chatId = c.id WHERE c.id = '${chatId}'`,
         { type: sequelize.QueryTypes.SELECT }
       );
       res.status(200).json({ chat: chat, users: lstUser, messages: messages });
     } catch (e) {
+      console.log(e);
       res.status(500).json(e);
     }
   }

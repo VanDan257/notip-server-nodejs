@@ -7,14 +7,14 @@ const UserChat = sequelize.define(
   "UserChats",
   {
     userId: {
-      type: DataTypes.INTEGER, // Change the data type to match your Message model ID type
+      type: DataTypes.UUID,
       references: {
         model: "Users", // Replace with your Message model name
         key: "id", // Replace with the primary key of Message model
       },
     },
     chatId: {
-      type: DataTypes.INTEGER, // Change the data type to match your Message model ID type
+      type: DataTypes.UUID,
       references: {
         model: "Chats", // Replace with your Message model name
         key: "id", // Replace with the primary key of Message model

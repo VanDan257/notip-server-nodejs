@@ -7,7 +7,7 @@ const UserRole = sequelize.define(
   "UserRoles",
   {
     userId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       primaryKey: true,
       references: {
         model: "User", // Tên của bảng User

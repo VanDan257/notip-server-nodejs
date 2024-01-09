@@ -6,6 +6,7 @@ const UserRole = require("../models/UserRole.js");
 const LoginUserHistory = require("../models/LoginUserHistory.js");
 const sequelize = require("../mySQL/dbconnect.js");
 const uploadToCloudinary = require("../utils/cloudinary.js");
+const { response } = require("express");
 
 class UserController {
   async register(req, res) {
@@ -15,7 +16,8 @@ class UserController {
 
       if (existingUser)
         return res.status(400).json({ message: "Email đã tồn tại" });
-      const newuser = new User({
+
+      const newuser = await User.create({
         email: email,
         password: password,
         name: username,
@@ -23,14 +25,13 @@ class UserController {
         status: 1,
       });
       const token = await newuser.generateAuthToken();
-      await newuser.save();
       await UserRole.create({
         userId: newuser.id,
         roleId: 1,
       });
       res.json({ message: "success", token: token });
     } catch (error) {
-      res.status(500).send(error);
+      res.status(500).json(error);
     }
   }
   async login(req, res) {
@@ -62,7 +63,7 @@ class UserController {
         });
       }
     } catch (error) {
-      res.status(500).json({ error: error });
+      res.status(500).json(error);
     }
   }
   async validUser(req, res) {
@@ -287,9 +288,15 @@ class UserController {
     }
   }
 
-  // async changeRoleAdmin(req, res) {
-
-  // }
+  async getInfoAdmin(req, res) {
+    const { adminId } = req.params;
+    try {
+      const admin = await User.findByPk(adminId);
+      return response.status(200).json(admin);
+    } catch (err) {
+      return res.status(500).json({ message: "Đã có lỗi xảy ra!" });
+    }
+  }
 }
 
 module.exports = UserController;

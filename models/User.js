@@ -7,9 +7,9 @@ const User = sequelize.define(
   "Users",
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true, // Tự động tăng giá trị
     },
     name: {
       type: DataTypes.STRING,
@@ -44,7 +44,7 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    lastLogin: {
+    lastActive: {
       type: DataTypes.DATE,
       allowNull: true,
     },
@@ -83,3 +83,8 @@ User.prototype.generateAuthToken = async function () {
 // User.hasMany(Message, { foreignKey: 'senderId' });
 
 module.exports = User;
+
+// CREATE TRIGGER `generate_id_users_create` BEFORE INSERT ON `users`
+//  FOR EACH ROW BEGIN
+//     SET NEW.id = UNHEX(REPLACE(UUID(), '-', ''));
+// END

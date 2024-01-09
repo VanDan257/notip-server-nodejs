@@ -13,14 +13,14 @@ const Friend = sequelize.define(
       autoIncrement: true, // Tự động tăng giá trị
     },
     senderId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       references: {
         model: "Users",
         key: "id",
       },
     },
     recipientId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       references: {
         model: "Users",
         key: "id",

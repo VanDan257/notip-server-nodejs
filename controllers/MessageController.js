@@ -67,7 +67,7 @@ class MessageController {
     const { chatId } = req.params;
     try {
       const messages = await sequelize.query(
-        `SELECT m.*, u.name as \`senderName\`, u.avatar as \`senderPhoto\` FROM messages as m INNER join users as u on m.senderId = u.id WHERE chatId = ${chatId} ORDER BY createdAt ASC`
+        `SELECT m.*, u.name as \`senderName\`, u.avatar as \`senderPhoto\` FROM messages as m INNER join users as u on m.senderId = u.id WHERE chatId = '${chatId}' ORDER BY createdAt ASC`
       );
 
       res.status(200).json(messages[0]);

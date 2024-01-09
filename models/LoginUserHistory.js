@@ -10,7 +10,7 @@ const LoginUserHistory = sequelize.define(
       autoIncrement: true,
     },
     userId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       references: {
         model: "Users",
         key: "id",

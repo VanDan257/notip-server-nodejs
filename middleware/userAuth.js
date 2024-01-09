@@ -1,24 +1,27 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const moment = require("moment");
-const Role = require("../models/Role");
+const sequelize = require("../mySQL/dbconnect");
 const UserRole = require("../models/UserRole");
+const { where } = require("sequelize");
 
 const Auth = async (req, res, next) => {
   try {
     let token = req.headers.authorization.split(" ")[1]; //when using browser this line
     const verifiedUser = jwt.verify(token, process.env.SECRET_KEY);
+
     const rootUser = await User.findOne({
       where: { id: verifiedUser.id },
       attributes: { exclude: ["password"] },
     });
 
-    if (rootUser) {
-      await User.update(
-        { lastLogin: moment().format("YYYY-MM-DD HH:mm:ss") },
-        { where: { id: rootUser.id } }
-      );
+    const currentTime = moment();
+    await User.update(
+      { lastActive: currentTime },
+      { where: { id: verifiedUser.id } }
+    );
 
+    if (rootUser) {
       req.token = token;
       req.rootUser = rootUser;
       req.rootUserId = rootUser.id;

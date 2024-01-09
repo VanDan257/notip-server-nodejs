@@ -25,14 +25,14 @@ const Message = sequelize.define(
       trim: true,
     },
     senderId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       references: {
         model: "Users",
         key: "id",
       },
     },
     chatId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       references: {
         model: "Chats",
         key: "id",
