@@ -4,9 +4,9 @@ const { Sequelize } = require("sequelize");
 const sequelize = new Sequelize(
   process.env.DB_DATABASENAME,
   process.env.DB_USERNAME,
-  "",
+  process.env.DB_PASSWORD,
   {
-    host: "localhost", // Thay đổi thành địa chỉ host của cơ sở dữ liệu MySQL của bạn nếu cần thiết
+    host: process.env.DB_HOST, // Thay đổi thành địa chỉ host của cơ sở dữ liệu MySQL của bạn nếu cần thiết
     dialect: "mysql", // Loại cơ sở dữ liệu sử dụng là MySQL,
     logging: false,
   }
@@ -22,9 +22,9 @@ sequelize
     console.error("Không thể kết nối đến cơ sở dữ liệu:", err);
   });
 
-// (async () => {
-//   await sequelize.sync(); // This will create the table if it doesn't exist
-//   console.log("database notip synced");
-// })();
+(async () => {
+  await sequelize.sync(); // This will create the table if it doesn't exist
+  console.log("database notip synced");
+})();
 
 module.exports = sequelize;
