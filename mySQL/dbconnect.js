@@ -2,11 +2,11 @@ const { Sequelize } = require("sequelize");
 
 // Khởi tạo một đối tượng Sequelize và cung cấp thông tin kết nối đến cơ sở dữ liệu MySQL
 const sequelize = new Sequelize(
-  process.env.DB_DATABASENAME,
-  process.env.DB_USERNAME,
-  process.env.DB_PASSWORD,
+  process.env.DB_DATABASENAME_PRODUCTION,
+  process.env.DB_USERNAME_PRODUCTION,
+  process.env.DB_PASSWORD_PRODUCTION,
   {
-    host: process.env.DB_HOST, // Thay đổi thành địa chỉ host của cơ sở dữ liệu MySQL của bạn nếu cần thiết
+    host: process.env.DB_HOST_PRODUCTION, // Thay đổi thành địa chỉ host của cơ sở dữ liệu MySQL của bạn nếu cần thiết
     dialect: "mysql", // Loại cơ sở dữ liệu sử dụng là MySQL,
     logging: false,
   }

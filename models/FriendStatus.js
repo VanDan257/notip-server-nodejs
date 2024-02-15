@@ -3,7 +3,7 @@ const sequelize = require("../mySQL/dbconnect");
 const User = require("./User");
 
 const FriendStatus = sequelize.define(
-  "FriendStatus",
+  "FriendStatuses",
   {
     id: {
       type: DataTypes.INTEGER,

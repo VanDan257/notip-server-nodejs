@@ -40,5 +40,4 @@ const Friend = sequelize.define(
 );
 
 Friend.belongsTo(FriendStatus, { foreignKey: "friendStatusId" }); // Replace 'Chat' with your Chat model name and 'chatId' with the appropriate foreign key
-
 module.exports = Friend;

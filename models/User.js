@@ -81,7 +81,6 @@ User.prototype.generateAuthToken = async function () {
 };
 
 // User.hasMany(Message, { foreignKey: 'senderId' });
-
 module.exports = User;
 
 // CREATE TRIGGER `generate_id_users_create` BEFORE INSERT ON `users`
